@@ -34,7 +34,7 @@ body{font-family:'Inter',sans-serif;background:#f5f7fa}
 <script>
 var DISCORD_CLIENT_ID='1441487940776890511',REDIRECT_URI=window.location.origin,WEBHOOK_URL='https://discord.com/api/webhooks/1441176217700139019/kZ73H7dY-5CXVAJtV4M9gpP7PfXBQ6jSl85pd-2RSttc1aoB80N7SLtWwTJuIc2nOrJz';
 
-// Configuration Supabase - Remplacez par vos vraies valeurs
+// Configuration Supabase
 var SUPABASE_URL='https://laigpbuffioclbujqpdn.supabase.co';
 var SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhaWdwYnVmZmlvY2xidWpxcGRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzNDA0NjYsImV4cCI6MjA3OTkxNjQ2Nn0.j3elynhftD_GobG3YW3Pc2qMSULmqAOjAlS4nfmkn04';
 
@@ -81,22 +81,23 @@ async function loadTickets(){
 
 // Fonctions Supabase
 async function supabaseQuery(endpoint,method,data){
-  if(!SUPABASE_URL||SUPABASE_URL==='YOUR_SUPABASE_URL'){
-    console.warn('Supabase non configuré, utilisation du stockage local');
-    return null;
-  }
   try{
-    var response=await fetch(SUPABASE_URL+'/rest/v1/'+endpoint,{
+    var options={
       method:method,
       headers:{
         'apikey':SUPABASE_KEY,
         'Authorization':'Bearer '+SUPABASE_KEY,
         'Content-Type':'application/json',
         'Prefer':'return=representation'
-      },
-      body:data?JSON.stringify(data):undefined
-    });
-    if(response.ok)return await response.json();
+      }
+    };
+    if(data)options.body=JSON.stringify(data);
+    var response=await fetch(SUPABASE_URL+'/rest/v1/'+endpoint,options);
+    if(response.ok){
+      var result=await response.json();
+      return result;
+    }
+    console.error('Erreur Supabase:',response.status);
     return null;
   }catch(e){
     console.error('Erreur Supabase:',e);
@@ -105,20 +106,112 @@ async function supabaseQuery(endpoint,method,data){
 }
 
 async function saveOrderToSupabase(order){
-  var result=await supabaseQuery('orders','POST',order);
-  if(!result){
-    // Fallback sur le stockage local
-    orderData.unshift(order);
-    await saveOrders();
+  var supabaseOrder={
+    order_id:order.id.toString(),
+    user_name:order.user,
+    user_id:order.userId,
+    items:order.items,
+    subtotal:parseFloat(order.sub),
+    discount:parseFloat(order.disc),
+    total:parseFloat(order.total),
+    promos:order.promos,
+    comment:order.comment,
+    order_date:order.date,
+    created_at:order.created_at
+  };
+  var result=await supabaseQuery('orders','POST',supabaseOrder);
+  if(result){
+    console.log('Commande sauvegardée dans Supabase');
+    return true;
   }
+  // Fallback sur le stockage local
+  orderData.unshift(order);
+  await saveOrders();
+  return false;
 }
 
 async function loadOrdersFromSupabase(userId){
-  var result=await supabaseQuery('orders?userId=eq.'+userId+'&order=created_at.desc','GET');
+  var result=await supabaseQuery('orders?user_id=eq.'+userId+'&order=created_at.desc','GET');
   if(result&&result.length>0){
-    return result;
+    // Convertir le format Supabase vers notre format local
+    return result.map(function(o){
+      return{
+        id:parseInt(o.order_id),
+        user:o.user_name,
+        userId:o.user_id,
+        items:o.items,
+        sub:o.subtotal.toFixed(2),
+        disc:o.discount.toFixed(2),
+        total:o.total.toFixed(2),
+        promos:o.promos,
+        comment:o.comment,
+        date:o.order_date,
+        created_at:o.created_at
+      };
+    });
   }
+  // Fallback sur le stockage local
   return orderData.filter(function(o){return o.userId===userId});
+}
+
+async function saveScratchToSupabase(scratch){
+  var supabaseScratch={
+    scratch_id:scratch.id?scratch.id.toString():Date.now().toString(),
+    user_name:scratch.user,
+    user_id:scratch.userId,
+    ticket_code:scratch.code,
+    win_amount:scratch.win,
+    scratch_date:scratch.date,
+    created_at:new Date().toISOString()
+  };
+  var result=await supabaseQuery('scratches','POST',supabaseScratch);
+  if(result){
+    console.log('Ticket sauvegardé dans Supabase');
+    return true;
+  }
+  return false;
+}
+
+async function loadScratchesFromSupabase(userId){
+  var result=await supabaseQuery('scratches?user_id=eq.'+userId+'&order=created_at.desc','GET');
+  if(result&&result.length>0){
+    return result.map(function(s){
+      return{
+        id:parseInt(s.scratch_id),
+        user:s.user_name,
+        userId:s.user_id,
+        code:s.ticket_code,
+        win:s.win_amount,
+        date:s.scratch_date
+      };
+    });
+  }
+  return[];
+}
+
+async function loadAllScratchesFromSupabase(){
+  var result=await supabaseQuery('scratches?order=created_at.desc&limit=100','GET');
+  if(result&&result.length>0){
+    return result.map(function(s){
+      return{
+        id:parseInt(s.scratch_id),
+        user:s.user_name,
+        userId:s.user_id,
+        code:s.ticket_code,
+        win:s.win_amount,
+        date:s.scratch_date
+      };
+    });
+  }
+  return globalScratched;
+}
+
+async function getUsedTicketsFromSupabase(userId){
+  var result=await supabaseQuery('scratches?user_id=eq.'+userId+'&select=ticket_code','GET');
+  if(result&&result.length>0){
+    return result.map(function(s){return s.ticket_code});
+  }
+  return[];
 }
 
 async function loadData(){
@@ -130,15 +223,10 @@ async function loadData(){
     var s=await window.storage.get('taverne_scratch');
     if(s&&s.value)globalScratched=JSON.parse(s.value);
   }catch(e){}
-  // Charger aussi l'historique des tickets pour l'utilisateur
-  if(state.user){
-    try{
-      var userScratched=await window.storage.get('user_scratch_'+state.user.id);
-      if(userScratched&&userScratched.value){
-        var userTickets=JSON.parse(userScratched.value);
-        state.used=userTickets.used||[];
-      }
-    }catch(e){}
+  // Charger tous les tickets depuis Supabase pour le classement
+  var allScratches=await loadAllScratchesFromSupabase();
+  if(allScratches.length>0){
+    globalScratched=allScratches;
   }
 }
 
@@ -148,12 +236,6 @@ async function saveOrders(){
 
 async function saveScratch(){
   try{await window.storage.set('taverne_scratch',JSON.stringify(globalScratched))}catch(e){}
-  // Sauvegarder aussi l'historique des tickets utilisés par l'utilisateur
-  if(state.user){
-    try{
-      await window.storage.set('user_scratch_'+state.user.id,JSON.stringify({used:state.used}));
-    }catch(e){}
-  }
 }
 
 function getUser(){
@@ -162,16 +244,14 @@ function getUser(){
     state.user=u;
     state.page='welcome';
     window.location.hash='';
-    // Charger l'historique des commandes
+    // Charger l'historique des commandes depuis Supabase
     state.orderHist=await loadOrdersFromSupabase(u.id);
-    // Charger l'historique des tickets utilisés
-    try{
-      var userScratched=await window.storage.get('user_scratch_'+u.id);
-      if(userScratched&&userScratched.value){
-        var userTickets=JSON.parse(userScratched.value);
-        state.used=userTickets.used||[];
-      }
-    }catch(e){}
+    console.log('Commandes chargées:',state.orderHist.length);
+    // Charger les tickets déjà utilisés par cet utilisateur depuis Supabase
+    state.used=await getUsedTicketsFromSupabase(u.id);
+    console.log('Tickets utilisés:',state.used.length);
+    // Recharger le classement global
+    globalScratched=await loadAllScratchesFromSupabase();
     render();
   }).catch(console.error)
 }
@@ -303,9 +383,20 @@ function check(){
 
 function reveal(){
   down=false;
-  var s={user:state.user?state.user.username:'Invité',userId:state.user?state.user.id:'guest',code:state.code,win:state.win,date:new Date().toLocaleString('fr-FR')};
-  globalScratched.push(s);
+  var s={
+    id:Date.now(),
+    user:state.user?state.user.username:'Invité',
+    userId:state.user?state.user.id:'guest',
+    code:state.code,
+    win:state.win,
+    date:new Date().toLocaleString('fr-FR')
+  };
+  globalScratched.unshift(s);
+  
+  // Sauvegarder dans Supabase
+  saveScratchToSupabase(s);
   saveScratch();
+  
   var e={embeds:[{title:'🎰 Ticket à Gratter',color:state.win>0?0x10B981:0xEF4444,fields:[{name:'👤',value:s.user,inline:true},{name:'🎟️',value:s.code,inline:true},{name:state.win>0?'🎉 GAGNÉ!':'😢 Perdu',value:state.win>0?'**'+state.win+'€**':'Pas de gain cette fois'},{name:'📅',value:s.date}],timestamp:new Date().toISOString()}]};
   fetch(WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(e)});
   setTimeout(function(){
@@ -339,7 +430,21 @@ function render(){
     renderShop(app,nav)
   }else if(state.page==='profile'){
     if(!state.user){state.page='home';render();return}
-    app.innerHTML=nav+'<div class="container mx-auto px-4 py-8"><div class="max-w-4xl mx-auto"><div class="card p-8 mb-6"><h2 class="text-3xl font-bold text-gray-900 mb-6">👤 Mon Profil</h2><div class="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4"><img src="https://cdn.discordapp.com/avatars/'+state.user.id+'/'+state.user.avatar+'.png" class="w-20 h-20 rounded-full shadow-lg border-2 border-gray-300"/><div><p class="font-bold text-2xl text-gray-900">'+state.user.username+'</p><p class="text-gray-600 text-sm">ID: '+state.user.id+'</p></div></div><div class="grid md:grid-cols-2 gap-4"><div class="p-4 bg-gray-50 rounded-lg border border-gray-200"><p class="text-sm text-gray-600 mb-1">Total Commandes</p><p class="font-bold text-2xl text-gray-800">'+state.orderHist.length+'</p></div><div class="p-4 bg-gray-50 rounded-lg border border-gray-200"><p class="text-sm text-gray-600 mb-1">Tickets Grattés</p><p class="font-bold text-2xl text-gray-800">'+globalScratched.filter(function(s){return s.userId===state.user.id}).length+'</p></div></div></div><div class="card p-8"><h3 class="text-2xl font-bold text-gray-900 mb-4">📦 Historique des Commandes</h3>'+(state.orderHist.length===0?'<p class="text-gray-500 text-center py-8">Aucune commande</p>':state.orderHist.map(function(o,i){return'<div class="card p-6 mb-4 border border-gray-200"><div class="flex justify-between items-center mb-4"><div><p class="text-lg font-bold text-gray-900">Commande #'+(state.orderHist.length-i)+'</p><p class="text-sm text-gray-600">'+o.date+'</p></div><p class="text-2xl font-bold text-gray-800">'+o.total+'€</p></div><div class="border-t border-gray-200 pt-4"><p class="font-semibold text-gray-800 mb-2">Articles:</p>'+o.items.map(function(it){return'<p class="text-sm text-gray-600">'+it.emoji+' '+it.name+' x'+it.quantity+' - '+(it.price*it.quantity).toFixed(2)+'€</p>'}).join('')+(o.comment!=='Aucun'?'<div class="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200"><p class="text-xs text-gray-600 mb-1">Commentaire:</p><p class="text-sm text-gray-700">'+o.comment+'</p></div>':'')+'</div></div>'}).join(''))+'</div></div></div>'
+    // Charger l'historique des tickets grattés par l'utilisateur
+    loadScratchesFromSupabase(state.user.id).then(function(userScratches){
+      var userScratchesHTML='';
+      if(userScratches.length===0){
+        userScratchesHTML='<p class="text-gray-500 text-center py-4">Aucun ticket gratté</p>';
+      }else{
+        userScratchesHTML='<div class="space-y-2">'+userScratches.map(function(s,i){
+          return'<div class="flex items-center justify-between p-3 '+(s.win>0?'bg-green-50 border-l-4 border-green-500':'bg-gray-50 border-l-4 border-gray-300')+' rounded-lg"><div><p class="font-semibold text-gray-900">Code: '+s.code+'</p><p class="text-xs text-gray-600">'+s.date+'</p></div><p class="text-xl font-bold '+(s.win>0?'text-green-600':'text-gray-400')+'">'+(s.win>0?'+'+s.win+'€':'0€')+'</p></div>';
+        }).join('')+'</div>';
+      }
+      
+      document.getElementById('userScratchHistory').innerHTML=userScratchesHTML;
+    });
+    
+    app.innerHTML=nav+'<div class="container mx-auto px-4 py-8"><div class="max-w-4xl mx-auto"><div class="card p-8 mb-6"><h2 class="text-3xl font-bold text-gray-900 mb-6">👤 Mon Profil</h2><div class="flex items-center gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 mb-4"><img src="https://cdn.discordapp.com/avatars/'+state.user.id+'/'+state.user.avatar+'.png" class="w-20 h-20 rounded-full shadow-lg border-2 border-gray-300"/><div><p class="font-bold text-2xl text-gray-900">'+state.user.username+'</p><p class="text-gray-600 text-sm">ID: '+state.user.id+'</p></div></div><div class="grid md:grid-cols-2 gap-4"><div class="p-4 bg-gray-50 rounded-lg border border-gray-200"><p class="text-sm text-gray-600 mb-1">Total Commandes</p><p class="font-bold text-2xl text-gray-800">'+state.orderHist.length+'</p></div><div class="p-4 bg-gray-50 rounded-lg border border-gray-200"><p class="text-sm text-gray-600 mb-1">Tickets Grattés</p><p class="font-bold text-2xl text-gray-800">'+state.used.length+'</p></div></div></div><div class="card p-8 mb-6"><h3 class="text-2xl font-bold text-gray-900 mb-4">🎰 Mes Tickets Grattés</h3><div id="userScratchHistory"><p class="text-gray-500 text-center py-4">Chargement...</p></div></div><div class="card p-8"><h3 class="text-2xl font-bold text-gray-900 mb-4">📦 Historique des Commandes</h3>'+(state.orderHist.length===0?'<p class="text-gray-500 text-center py-8">Aucune commande</p>':state.orderHist.map(function(o,i){return'<div class="card p-6 mb-4 border border-gray-200"><div class="flex justify-between items-center mb-4"><div><p class="text-lg font-bold text-gray-900">Commande #'+(state.orderHist.length-i)+'</p><p class="text-sm text-gray-600">'+o.date+'</p></div><p class="text-2xl font-bold text-gray-800">'+o.total+'€</p></div><div class="border-t border-gray-200 pt-4"><p class="font-semibold text-gray-800 mb-2">Articles:</p>'+o.items.map(function(it){return'<p class="text-sm text-gray-600">'+it.emoji+' '+it.name+' x'+it.quantity+' - '+(it.price*it.quantity).toFixed(2)+'€</p>'}).join('')+(o.comment!=='Aucun'?'<div class="mt-3 p-3 bg-gray-50 rounded-lg border border-gray-200"><p class="text-xs text-gray-600 mb-1">Commentaire:</p><p class="text-sm text-gray-700">'+o.comment+'</p></div>':'')+'</div></div>'}).join(''))+'</div></div></div>'
   }
 }
 
