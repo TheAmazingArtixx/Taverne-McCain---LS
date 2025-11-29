@@ -10,756 +10,415 @@
 body{font-family:'Inter',sans-serif;background:#f8fafc}
 .card{background:white;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);transition:all 0.3s}
 .card:hover{box-shadow:0 4px 12px rgba(0,0,0,0.15)}
-.btn-primary{background:#ea580c;color:white;padding:12px 24px;border-radius:8px;font-weight:500;transition:all 0.3s}
-.btn-primary:hover{background:#c2410c;transform:translateY(-1px)}
-.btn-secondary{background:#f1f5f9;color:#334155;padding:12px 24px;border-radius:8px;font-weight:500;transition:all 0.3s}
-.btn-secondary:hover{background:#e2e8f0}
-.scratch-ticket{position:relative;width:100%;max-width:400px;margin:0 auto;background:#fff;border-radius:16px;overflow:hidden;border:3px solid #ea580c;box-shadow:0 8px 24px rgba(0,0,0,0.15)}
-.scratch-canvas{position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;z-index:10}
-.nav-link{padding:8px 16px;border-radius:6px;transition:all 0.2s}
-.nav-link:hover{background:#f1f5f9}
-@media(max-width:768px){.container{padding:16px}}
+.scratch-ticket{position:relative;width:100%;max-width:500px;margin:0 auto;background:linear-gradient(135deg,#00CED1 0%,#20B2AA 50%,#9370DB 100%);border-radius:25px;overflow:hidden;border:10px solid #FFD700;box-shadow:0 20px 50px rgba(0,0,0,0.4)}
+.ticket-header{background:linear-gradient(135deg,#FF1493 0%,#9370DB 100%);padding:20px;position:relative}
+.illiko-badge{background:white;color:#FF1493;font-weight:900;padding:10px 20px;border-radius:30px;font-size:16px;display:inline-block;box-shadow:0 4px 10px rgba(0,0,0,0.3)}
+.nouveau-badge{background:#4169E1;color:white;font-weight:900;padding:5px 15px;border-radius:15px;font-size:12px;position:absolute;top:20px;left:20px}
+.price-badge{background:white;color:#FF1493;font-weight:900;padding:8px 16px;border-radius:50%;font-size:18px;position:absolute;top:20px;right:20px;border:3px solid #FFD700}
+.jackpot-title{font-size:clamp(32px,8vw,56px);font-weight:900;color:#FFA500;text-shadow:4px 4px 0 #FF4500,-2px -2px 0 #FFD700,2px -2px 0 #FFD700,-2px 2px 0 #FFD700;letter-spacing:3px;text-align:center;margin:20px 0;-webkit-text-stroke:2px #4169E1}
+.jackpot-amount{font-size:clamp(40px,10vw,72px);font-weight:900;color:#FFD700;text-shadow:4px 4px 0 #FF4500;text-align:center;-webkit-text-stroke:2px #4169E1;margin-bottom:20px}
+.winning-section{background:linear-gradient(135deg,#9370DB 0%,#8A2BE2 100%);padding:20px;margin:15px;border-radius:20px;border:5px solid #32CD32}
+.scratch-section{background:linear-gradient(135deg,#4169E1 0%,#1E90FF 100%);padding:20px;margin:15px;border-radius:20px;border:5px solid #32CD32;position:relative;min-height:350px}
+.section-title{color:white;font-weight:900;font-size:18px;text-align:center;margin-bottom:15px;text-shadow:2px 2px 4px rgba(0,0,0,0.5)}
+.winning-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.winning-item{background:linear-gradient(145deg,#FFD700,#FFA500);border:4px solid #FF4500;border-radius:50%;width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:28px;color:#8B0000;box-shadow:0 6px 12px rgba(0,0,0,0.4);animation:coinSpin 3s ease-in-out infinite}
+@keyframes coinSpin{0%,100%{transform:rotateY(0deg)}50%{transform:rotateY(180deg)}}
+.number-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;position:relative;z-index:1}
+.money-item{background:linear-gradient(145deg,#98FB98,#90EE90);border:4px solid #228B22;border-radius:12px;padding:15px 10px;text-align:center;font-weight:900;font-size:20px;color:#006400;box-shadow:0 6px 12px rgba(0,0,0,0.3);position:relative}
+.money-item::before{content:'💵';position:absolute;top:5px;left:5px;font-size:16px}
+.money-item.winner{background:linear-gradient(145deg,#FFD700,#FFA500);border-color:#FF4500;color:#8B0000;animation:winPulse 1s ease-in-out infinite}
+@keyframes winPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.scratch-canvas{position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;border-radius:20px;z-index:10}
+.footer-text{text-align:center;color:#FFD700;font-weight:900;font-size:14px;text-shadow:2px 2px 4px rgba(0,0,0,0.8);padding:15px;background:rgba(0,0,0,0.3);margin:15px;border-radius:15px}
+@media(max-width:640px){.winning-item{font-size:22px}.money-item{padding:12px 8px;font-size:18px}.jackpot-title{font-size:28px}.jackpot-amount{font-size:36px}}
 </style>
 </head>
 <body>
 <div id="app"></div>
 <script>
-const DISCORD_CLIENT_ID='1441487940776890511';
-const REDIRECT_URI=window.location.origin;
-const WEBHOOK_URL='https://discord.com/api/webhooks/1441176217700139019/kZ73H7dY-5CXVAJtV4M9gpP7PfXBQ6jSl85pd-2RSttc1aoB80N7SLtWwTJuIc2nOrJz';
+var DISCORD_CLIENT_ID='1441487940776890511',REDIRECT_URI=window.location.origin,WEBHOOK_URL='https://discord.com/api/webhooks/1441176217700139019/kZ73H7dY-5CXVAJtV4M9gpP7PfXBQ6jSl85pd-2RSttc1aoB80N7SLtWwTJuIc2nOrJz';
+var products={bieres:[{id:'b1',name:'Bière Blonde',price:4.5,emoji:'🍺'},{id:'b2',name:'Bière Blanche',price:4.5,emoji:'🍺'},{id:'b3',name:'Bière Rouge',price:4.5,emoji:'🍺'}],vins:[{id:'v1',name:'Vin',price:18.5,emoji:'🍷'}],boissons:[{id:'d1',name:'Eau',price:3,emoji:'💧'},{id:'d2',name:'Soda',price:3.5,emoji:'🥤'}],snacks:[{id:'s1',name:'Chips',price:1.5,emoji:'🥔'},{id:'s2',name:'Saucisson',price:1.5,emoji:'🌭'}]};
+var promoCodes={'HAPPY20':20,'BIENVENUE':10,'MCCAIN15':15};
+var tickets={'MC7X9K2P':{w:0},'ZT4N8W1Q':{w:10},'BV6R3M5L':{w:0},'HJ2D7Y9K':{w:50},'PF8S1X4G':{w:0},'QN3T6Z2M':{w:100},'WR9V5L8H':{w:0},'KD1P7N4B':{w:10},'XG6M2Y9C':{w:0},'LF4W8K3J':{w:500},'TS7R1Q5D':{w:0},'NZ2X9P6V':{w:10},'MH8L4T1W':{w:0},'BC3N7M9R':{w:50},'YK6S2D8F':{w:0},'VJ1Z5W4P':{w:10},'QL9G3X7N':{w:0},'RT4H8M2K':{w:100},'FB7L1Y6C':{w:0},'DW2N9T5Q':{w:10},'PX6V3K8S':{w:0},'ZM1R7J4G':{w:50},'LC9D2P6H':{w:0},'NK4W8X1B':{w:10},'TF7S3Y9V':{w:0},'QG2M5Z8L':{w:100},'HX6N1Q4R':{w:0},'WJ9T7K2D':{w:10},'BP3L8M6C':{w:0},'VR1Y4P9F':{w:500}};
+var globalScratched=[];
+var orderData=[];
+var state={user:null,cart:[],page:'home',promos:[],comment:'',orderHist:[],code:'',scratching:false,win:0,winNums:[],yourNums:[],used:[],currentPromo:''};
+var canvas,ctx,down=false,pct=0;
 
-const products={
-  bieres:[
-    {id:'b1',name:'Bière Blonde',price:4.5,emoji:'🍺'},
-    {id:'b2',name:'Bière Blanche',price:4.5,emoji:'🍺'},
-    {id:'b3',name:'Bière Rouge',price:4.5,emoji:'🍺'}
-  ],
-  vins:[{id:'v1',name:'Vin Rouge',price:18.5,emoji:'🍷'}],
-  boissons:[
-    {id:'d1',name:'Eau Minérale',price:3,emoji:'💧'},
-    {id:'d2',name:'Soda',price:3.5,emoji:'🥤'}
-  ],
-  snacks:[
-    {id:'s1',name:'Chips',price:1.5,emoji:'🥔'},
-    {id:'s2',name:'Saucisson',price:1.5,emoji:'🌭'}
-  ]
-};
-
-const promoCodes={'HAPPY20':20,'BIENVENUE':10,'MCCAIN15':15};
-
-const tickets={
-  'MC7X9K2P':{w:0},'ZT4N8W1Q':{w:10},'BV6R3M5L':{w:0},'HJ2D7Y9K':{w:50},
-  'PF8S1X4G':{w:0},'QN3T6Z2M':{w:100},'WR9V5L8H':{w:0},'KD1P7N4B':{w:10},
-  'XG6M2Y9C':{w:0},'LF4W8K3J':{w:500},'TS7R1Q5D':{w:0},'NZ2X9P6V':{w:10}
-};
-
-let state={
-  user:null,
-  cart:[],
-  page:'home',
-  promos:[],
-  comment:'',
-  code:'',
-  scratching:false,
-  win:0,
-  winNums:[],
-  yourNums:[],
-  currentPromo:''
-};
-
-let orderData=[];
-let scratchData=[];
-let canvas,ctx,isDrawing=false,scratchPct=0;
-
-// Stockage persistant
-async function saveOrders(){
+async function loadData(){
   try{
-    await window.storage.set('taverne_orders',JSON.stringify(orderData));
-  }catch(e){console.log('Storage not available, using memory only')}
+    var o=await window.storage.get('taverne_orders');
+    if(o&&o.value)orderData=JSON.parse(o.value);
+  }catch(e){}
+  try{
+    var s=await window.storage.get('taverne_scratch');
+    if(s&&s.value)globalScratched=JSON.parse(s.value);
+  }catch(e){}
 }
 
-async function loadOrders(){
-  try{
-    const result=await window.storage.get('taverne_orders');
-    if(result&&result.value){
-      orderData=JSON.parse(result.value);
-    }
-  }catch(e){console.log('Loading from memory')}
+async function saveOrders(){
+  try{await window.storage.set('taverne_orders',JSON.stringify(orderData))}catch(e){}
 }
 
 async function saveScratch(){
-  try{
-    await window.storage.set('taverne_scratch',JSON.stringify(scratchData));
-  }catch(e){console.log('Storage not available')}
-}
-
-async function loadScratch(){
-  try{
-    const result=await window.storage.get('taverne_scratch');
-    if(result&&result.value){
-      scratchData=JSON.parse(result.value);
-    }
-  }catch(e){console.log('Loading from memory')}
+  try{await window.storage.set('taverne_scratch',JSON.stringify(globalScratched))}catch(e){}
 }
 
 function getUser(){
-  const params=new URLSearchParams(window.location.hash.slice(1));
-  const token=params.get('access_token');
-  if(token){
-    fetch('https://discord.com/api/users/@me',{
-      headers:{authorization:`Bearer ${token}`}
-    })
-    .then(r=>r.json())
-    .then(u=>{
-      state.user=u;
-      window.location.hash='';
-      render();
-    })
-    .catch(console.error);
-  }
+  var f=new URLSearchParams(window.location.hash.slice(1)),t=f.get('access_token');
+  if(t)fetch('https://discord.com/api/users/@me',{headers:{authorization:'Bearer '+t}}).then(function(r){return r.json()}).then(function(u){state.user=u;state.page='welcome';window.location.hash='';render()}).catch(console.error)
 }
 
-function login(){
-  window.location.href=`https://discord.com/api/oauth2/authorize?client_id=${DISCORD_CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=identify`;
-}
+function login(){window.location.href='https://discord.com/api/oauth2/authorize?client_id='+DISCORD_CLIENT_ID+'&redirect_uri='+encodeURIComponent(REDIRECT_URI)+'&response_type=token&scope=identify'}
 
-function logout(){
-  state.user=null;
-  state.cart=[];
-  state.promos=[];
-  state.comment='';
-  state.page='home';
-  render();
-}
+function logout(){state={user:null,cart:[],page:'home',promos:[],comment:'',orderHist:[],code:'',scratching:false,win:0,winNums:[],yourNums:[],used:[],currentPromo:''};render()}
 
-function addToCart(product){
-  const existing=state.cart.find(i=>i.id===product.id);
-  if(existing){
-    existing.quantity++;
-  }else{
-    state.cart.push({...product,quantity:1});
-  }
-  render();
-}
+function addCart(p){var e=state.cart.find(function(i){return i.id===p.id});if(e)e.quantity++;else state.cart.push(Object.assign({},p,{quantity:1}));render()}
 
-function updateQuantity(id,qty){
-  if(qty<=0){
-    state.cart=state.cart.filter(i=>i.id!==id);
-  }else{
-    const item=state.cart.find(i=>i.id===id);
-    if(item)item.quantity=qty;
-  }
-  render();
-}
+function updateQty(id,q){if(q<=0)state.cart=state.cart.filter(function(i){return i.id!==id});else{var i=state.cart.find(function(i){return i.id===id});if(i)i.quantity=q}render()}
 
-function addPromoCode(){
-  const code=state.currentPromo.toUpperCase().trim();
-  if(!code)return;
-  if(promoCodes[code]&&!state.promos.includes(code)){
-    state.promos.push(code);
-    state.currentPromo='';
-    render();
-  }else if(state.promos.includes(code)){
-    alert('Code déjà utilisé!');
-    state.currentPromo='';
-  }else{
-    alert('Code invalide!');
-    state.currentPromo='';
-  }
-}
+function promoKeyPress(e){if(e.key.length===1&&/[A-Z0-9]/.test(e.key.toUpperCase())){state.currentPromo+=e.key.toUpperCase();render()}}
 
-function removePromo(code){
-  state.promos=state.promos.filter(p=>p!==code);
-  render();
-}
+function addPromo(){var c=state.currentPromo.toUpperCase().trim();if(!c)return;if(promoCodes[c]&&state.promos.indexOf(c)===-1){state.promos.push(c);state.currentPromo='';render()}else if(state.promos.indexOf(c)!==-1){alert('Code déjà utilisé!');state.currentPromo=''}else{alert('Code invalide!');state.currentPromo=''}}
 
-function calculateSubtotal(){
-  return state.cart.reduce((sum,item)=>sum+(item.price*item.quantity),0);
-}
+function removePromo(code){state.promos=state.promos.filter(function(p){return p!==code});render()}
 
-function calculateDiscount(){
-  const totalPercent=state.promos.reduce((sum,code)=>sum+(promoCodes[code]||0),0);
-  return calculateSubtotal()*(totalPercent/100);
-}
+function calcSub(){return state.cart.reduce(function(s,i){return s+(i.price*i.quantity)},0)}
 
-function calculateTotal(){
-  return calculateSubtotal()-calculateDiscount();
-}
+function calcDisc(){var total=0;state.promos.forEach(function(p){total+=promoCodes[p]||0});return calcSub()*(total/100)}
 
-async function placeOrder(){
-  if(!state.cart.length){
-    alert('Votre panier est vide!');
-    return;
-  }
-  
-  const username=state.user?state.user.username:'Invité';
-  const userId=state.user?state.user.id:'guest';
-  
-  if(!confirm(`Confirmer la commande?\n\nTotal: ${calculateTotal().toFixed(2)}€`))return;
-  
-  const order={
-    id:Date.now(),
-    user:username,
-    userId:userId,
-    items:[...state.cart],
-    subtotal:calculateSubtotal().toFixed(2),
-    discount:calculateDiscount().toFixed(2),
-    total:calculateTotal().toFixed(2),
-    promos:state.promos.join(', ')||'Aucun',
-    comment:state.comment||'Aucun',
-    date:new Date().toLocaleString('fr-FR')
-  };
-  
-  orderData.unshift(order);
-  await saveOrders();
-  
-  const itemsText=order.items.map(i=>
-    `${i.emoji} **${i.name}** x${i.quantity} - ${(i.price*i.quantity).toFixed(2)}€`
-  ).join('\n');
-  
-  const embed={
-    embeds:[{
-      title:'🍺 Nouvelle Commande',
-      color:0xEA580C,
-      fields:[
-        {name:'👤 Client',value:order.user,inline:true},
-        {name:'📅 Date',value:order.date,inline:true},
-        {name:'🍻 Articles',value:itemsText},
-        {name:'💰 Total',value:`**${order.total}€**`},
-        {name:'🎟️ Promos',value:order.promos}
-      ],
-      timestamp:new Date().toISOString()
-    }]
-  };
-  
-  if(state.comment)embed.embeds[0].fields.push({name:'💬 Commentaire',value:state.comment});
-  
-  fetch(WEBHOOK_URL,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(embed)
-  })
-  .then(r=>{
+function calcTotal(){return calcSub()-calcDisc()}
+
+function order(){
+  if(!state.cart.length){alert('Panier vide!');return}
+  if(!confirm('Confirmer?\n\nTotal: '+calcTotal().toFixed(2)+'€'))return;
+  var username=state.user?state.user.username:'Invité';
+  var userId=state.user?state.user.id:'guest';
+  var o={id:Date.now(),user:username,userId:userId,items:state.cart,sub:calcSub().toFixed(2),disc:calcDisc().toFixed(2),total:calcTotal().toFixed(2),promos:state.promos.join(', ')||'Aucun',comment:state.comment||'Aucun',date:new Date().toLocaleString('fr-FR')};
+  var txt=o.items.map(function(i){return i.emoji+' **'+i.name+'** x'+i.quantity+' - '+(i.price*i.quantity).toFixed(2)+'€'}).join('\n');
+  var e={embeds:[{title:'🍺 Commande',color:0xFFA500,fields:[{name:'👤',value:o.user,inline:true},{name:'📅',value:o.date,inline:true},{name:'🍻',value:txt},{name:'💰',value:'Total: **'+o.total+'€**'},{name:'🎟️',value:o.promos}],timestamp:new Date().toISOString()}]};
+  if(state.comment!=='Aucun')e.embeds[0].fields.push({name:'💬',value:state.comment});
+  fetch(WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(e)}).then(function(r){
     if(r.ok){
-      alert('✅ Commande envoyée avec succès!');
+      orderData.unshift(o);
+      saveOrders();
+      state.orderHist.unshift(o);
+      alert('✅ Commande envoyée!');
       state.cart=[];
       state.promos=[];
       state.comment='';
+      state.page='orderHist';
       render();
-    }else{
-      alert('❌ Erreur lors de l\'envoi');
-    }
-  })
-  .catch(()=>alert('❌ Erreur réseau'));
-}
-<!-- PARTIE 2/2 - À copier après la Partie 1 -->
-<script>
-// Suite du code JavaScript
-
-function generateNumbers(){
-  const nums=[];
-  for(let i=0;i<20;i++){
-    nums.push(Math.floor(Math.random()*90)+10);
-  }
-  return nums;
+    }else alert('❌ Erreur')
+  }).catch(function(){alert('❌ Erreur')})
 }
 
-async function startScratch(){
-  const code=state.code.toUpperCase().trim();
-  if(!code){
-    alert('Veuillez entrer un code ticket!');
-    return;
-  }
-  if(!tickets[code]){
-    alert('❌ Code invalide!');
-    return;
-  }
-  
-  const used=scratchData.some(s=>s.code===code&&s.userId===(state.user?state.user.id:'guest'));
-  if(used){
-    alert('❌ Ce code a déjà été utilisé!');
-    return;
-  }
-  
-  const ticket=tickets[code];
-  const winningNums=[];
-  const yourNums=generateNumbers();
-  
-  for(let i=0;i<6;i++){
-    winningNums.push(yourNums[Math.floor(Math.random()*20)]);
-  }
-  
-  if(ticket.w>0){
-    let idx=Math.floor(Math.random()*20);
-    for(let j=0;j<3;j++){
-      yourNums[idx]=winningNums[j];
-      idx=(idx+4)%20;
-    }
-  }
-  
-  state.winNums=winningNums;
-  state.yourNums=yourNums;
-  state.win=ticket.w;
+function generateNums(){var n=[];for(var i=0;i<20;i++)n.push(Math.floor(Math.random()*90)+10);return n}
+
+function startScratch(){
+  var c=state.code.toUpperCase().trim();
+  if(!c){alert('Entrez un code!');return}
+  if(!tickets[c]){alert('❌ Code invalide!');return}
+  if(state.used.indexOf(c)!==-1){alert('❌ Code utilisé!');return}
+  state.used.push(c);
+  var t=tickets[c],w=[],nums=generateNums();
+  for(var i=0;i<6;i++)w.push(nums[Math.floor(Math.random()*20)]);
+  if(t.w>0){var replaceIdx=Math.floor(Math.random()*20);for(var j=0;j<Math.min(3,6);j++){nums[replaceIdx]=w[j];replaceIdx=(replaceIdx+4)%20}}
+  state.winNums=w;
+  state.yourNums=nums;
+  state.win=t.w;
   state.scratching=true;
-  
   render();
-  setTimeout(()=>initCanvas(),100);
+  setTimeout(function(){initCanvas()},100)
 }
 
 function initCanvas(){
-  canvas=document.getElementById('scratchCanvas');
+  canvas=document.getElementById('canvas');
   if(!canvas)return;
-  
   ctx=canvas.getContext('2d');
   canvas.width=canvas.parentElement.offsetWidth;
   canvas.height=canvas.parentElement.offsetHeight;
-  
-  const gradient=ctx.createLinearGradient(0,0,canvas.width,canvas.height);
-  gradient.addColorStop(0,'#cbd5e1');
-  gradient.addColorStop(1,'#94a3b8');
-  ctx.fillStyle=gradient;
+  var g=ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+  g.addColorStop(0,'#4169E1');
+  g.addColorStop(1,'#1E90FF');
+  ctx.fillStyle=g;
   ctx.fillRect(0,0,canvas.width,canvas.height);
-  
-  ctx.font='bold 20px Inter';
-  ctx.fillStyle='#475569';
+  ctx.font='bold 24px Inter';
+  ctx.fillStyle='white';
   ctx.textAlign='center';
-  ctx.fillText('GRATTEZ POUR RÉVÉLER',canvas.width/2,canvas.height/2-10);
-  ctx.font='32px Arial';
-  ctx.fillText('🎫',canvas.width/2,canvas.height/2+25);
-  
-  canvas.addEventListener('mousedown',()=>isDrawing=true);
-  canvas.addEventListener('mouseup',()=>isDrawing=false);
+  ctx.fillText('GRATTEZ POUR RÉVÉLER',canvas.width/2,canvas.height/2-20);
+  ctx.font='40px Arial';
+  ctx.fillText('💵',canvas.width/2,canvas.height/2+30);
+  canvas.addEventListener('mousedown',function(){down=true});
+  canvas.addEventListener('mouseup',function(){down=false});
   canvas.addEventListener('mousemove',scratch);
-  canvas.addEventListener('touchstart',e=>{e.preventDefault();isDrawing=true});
-  canvas.addEventListener('touchend',()=>isDrawing=false);
-  canvas.addEventListener('touchmove',e=>{e.preventDefault();scratch(e.touches[0])});
+  canvas.addEventListener('touchstart',function(e){e.preventDefault();down=true});
+  canvas.addEventListener('touchend',function(){down=false});
+  canvas.addEventListener('touchmove',function(e){e.preventDefault();scratch(e.touches[0])})
 }
 
 function scratch(e){
-  if(!isDrawing)return;
-  
-  const rect=canvas.getBoundingClientRect();
-  const x=(e.clientX||e.pageX)-rect.left;
-  const y=(e.clientY||e.pageY)-rect.top;
-  
+  if(!down)return;
+  var r=canvas.getBoundingClientRect(),x=(e.clientX||e.pageX)-r.left,y=(e.clientY||e.pageY)-r.top;
   ctx.globalCompositeOperation='destination-out';
   ctx.beginPath();
-  ctx.arc(x,y,30,0,Math.PI*2);
+  ctx.arc(x,y,40,0,Math.PI*2);
   ctx.fill();
-  
-  checkScratchProgress();
+  check()
 }
 
-function checkScratchProgress(){
-  const imgData=ctx.getImageData(0,0,canvas.width,canvas.height).data;
-  let transparent=0;
-  for(let i=3;i<imgData.length;i+=4){
-    if(imgData[i]===0)transparent++;
-  }
-  scratchPct=(transparent/(imgData.length/4))*100;
-  
-  if(scratchPct>60){
-    revealResult();
-  }
+function check(){
+  var d=ctx.getImageData(0,0,canvas.width,canvas.height).data,t=0;
+  for(var i=3;i<d.length;i+=4)if(d[i]===0)t++;
+  pct=(t/(d.length/4))*100;
+  if(pct>70)reveal()
 }
 
-async function revealResult(){
-  isDrawing=false;
-  
-  const scratchEntry={
-    id:Date.now(),
-    code:state.code,
-    user:state.user?state.user.username:'Invité',
-    userId:state.user?state.user.id:'guest',
-    win:state.win,
-    date:new Date().toLocaleString('fr-FR')
-  };
-  
-  scratchData.unshift(scratchEntry);
-  await saveScratch();
-  
-  const embed={
-    embeds:[{
-      title:'🎰 Ticket à Gratter',
-      color:state.win>0?0x10B981:0xEF4444,
-      fields:[
-        {name:'👤 Joueur',value:scratchEntry.user,inline:true},
-        {name:'🎟️ Code',value:scratchEntry.code,inline:true},
-        {name:state.win>0?'🎉 GAGNÉ!':'😢 Perdu',value:state.win>0?`**${state.win}€**`:'Pas de gain cette fois'},
-        {name:'📅 Date',value:scratchEntry.date}
-      ],
-      timestamp:new Date().toISOString()
-    }]
-  };
-  
-  fetch(WEBHOOK_URL,{
-    method:'POST',
-    headers:{'Content-Type':'application/json'},
-    body:JSON.stringify(embed)
-  });
-  
-  setTimeout(()=>{
-    if(state.win>0){
-      alert(`🎉 Félicitations! Vous avez gagné ${state.win}€!`);
-    }else{
-      alert('😢 Dommage, pas de gain cette fois...');
-    }
+function reveal(){
+  down=false;
+  var s={user:state.user?state.user.username:'Invité',userId:state.user?state.user.id:'guest',code:state.code,win:state.win,date:new Date().toLocaleString('fr-FR')};
+  globalScratched.push(s);
+  saveScratch();
+  var e={embeds:[{title:'🎰 Ticket',color:state.win>0?0x00FF00:0xFF0000,fields:[{name:'👤',value:s.user,inline:true},{name:'🎟️',value:s.code,inline:true},{name:state.win>0?'🎉 GAGNÉ!':'😢 Perdu',value:state.win>0?'**'+state.win+'€**':'Pas de gain'},{name:'📅',value:s.date}],timestamp:new Date().toISOString()}]};
+  fetch(WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(e)});
+  setTimeout(function(){
+    if(state.win>0)alert('🎉 Gagné '+state.win+'€!');
+    else alert('😢 Pas de gain...');
     state.scratching=false;
     state.code='';
-    scratchPct=0;
-    state.page='scratch';
-    render();
-  },500);
+    pct=0;
+    state.page='scratchList';
+    render()
+  },500)
+}
+  <!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Taverne McCain</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+body{font-family:'Inter',sans-serif;background:#f8fafc}
+.card{background:white;border-radius:12px;box-shadow:0 1px 3px rgba(0,0,0,0.1);transition:all 0.3s}
+.card:hover{box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+.scratch-ticket{position:relative;width:100%;max-width:500px;margin:0 auto;background:linear-gradient(135deg,#00CED1 0%,#20B2AA 50%,#9370DB 100%);border-radius:25px;overflow:hidden;border:10px solid #FFD700;box-shadow:0 20px 50px rgba(0,0,0,0.4)}
+.ticket-header{background:linear-gradient(135deg,#FF1493 0%,#9370DB 100%);padding:20px;position:relative}
+.illiko-badge{background:white;color:#FF1493;font-weight:900;padding:10px 20px;border-radius:30px;font-size:16px;display:inline-block;box-shadow:0 4px 10px rgba(0,0,0,0.3)}
+.nouveau-badge{background:#4169E1;color:white;font-weight:900;padding:5px 15px;border-radius:15px;font-size:12px;position:absolute;top:20px;left:20px}
+.price-badge{background:white;color:#FF1493;font-weight:900;padding:8px 16px;border-radius:50%;font-size:18px;position:absolute;top:20px;right:20px;border:3px solid #FFD700}
+.jackpot-title{font-size:clamp(32px,8vw,56px);font-weight:900;color:#FFA500;text-shadow:4px 4px 0 #FF4500,-2px -2px 0 #FFD700,2px -2px 0 #FFD700,-2px 2px 0 #FFD700;letter-spacing:3px;text-align:center;margin:20px 0;-webkit-text-stroke:2px #4169E1}
+.jackpot-amount{font-size:clamp(40px,10vw,72px);font-weight:900;color:#FFD700;text-shadow:4px 4px 0 #FF4500;text-align:center;-webkit-text-stroke:2px #4169E1;margin-bottom:20px}
+.winning-section{background:linear-gradient(135deg,#9370DB 0%,#8A2BE2 100%);padding:20px;margin:15px;border-radius:20px;border:5px solid #32CD32}
+.scratch-section{background:linear-gradient(135deg,#4169E1 0%,#1E90FF 100%);padding:20px;margin:15px;border-radius:20px;border:5px solid #32CD32;position:relative;min-height:350px}
+.section-title{color:white;font-weight:900;font-size:18px;text-align:center;margin-bottom:15px;text-shadow:2px 2px 4px rgba(0,0,0,0.5)}
+.winning-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:12px}
+.winning-item{background:linear-gradient(145deg,#FFD700,#FFA500);border:4px solid #FF4500;border-radius:50%;width:100%;aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:28px;color:#8B0000;box-shadow:0 6px 12px rgba(0,0,0,0.4);animation:coinSpin 3s ease-in-out infinite}
+@keyframes coinSpin{0%,100%{transform:rotateY(0deg)}50%{transform:rotateY(180deg)}}
+.number-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;position:relative;z-index:1}
+.money-item{background:linear-gradient(145deg,#98FB98,#90EE90);border:4px solid #228B22;border-radius:12px;padding:15px 10px;text-align:center;font-weight:900;font-size:20px;color:#006400;box-shadow:0 6px 12px rgba(0,0,0,0.3);position:relative}
+.money-item::before{content:'💵';position:absolute;top:5px;left:5px;font-size:16px}
+.money-item.winner{background:linear-gradient(145deg,#FFD700,#FFA500);border-color:#FF4500;color:#8B0000;animation:winPulse 1s ease-in-out infinite}
+@keyframes winPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.scratch-canvas{position:absolute;top:0;left:0;width:100%;height:100%;cursor:crosshair;border-radius:20px;z-index:10}
+.footer-text{text-align:center;color:#FFD700;font-weight:900;font-size:14px;text-shadow:2px 2px 4px rgba(0,0,0,0.8);padding:15px;background:rgba(0,0,0,0.3);margin:15px;border-radius:15px}
+@media(max-width:640px){.winning-item{font-size:22px}.money-item{padding:12px 8px;font-size:18px}.jackpot-title{font-size:28px}.jackpot-amount{font-size:36px}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+var DISCORD_CLIENT_ID='1441487940776890511',REDIRECT_URI=window.location.origin,WEBHOOK_URL='https://discord.com/api/webhooks/1441176217700139019/kZ73H7dY-5CXVAJtV4M9gpP7PfXBQ6jSl85pd-2RSttc1aoB80N7SLtWwTJuIc2nOrJz';
+var products={bieres:[{id:'b1',name:'Bière Blonde',price:4.5,emoji:'🍺'},{id:'b2',name:'Bière Blanche',price:4.5,emoji:'🍺'},{id:'b3',name:'Bière Rouge',price:4.5,emoji:'🍺'}],vins:[{id:'v1',name:'Vin',price:18.5,emoji:'🍷'}],boissons:[{id:'d1',name:'Eau',price:3,emoji:'💧'},{id:'d2',name:'Soda',price:3.5,emoji:'🥤'}],snacks:[{id:'s1',name:'Chips',price:1.5,emoji:'🥔'},{id:'s2',name:'Saucisson',price:1.5,emoji:'🌭'}]};
+var promoCodes={'HAPPY20':20,'BIENVENUE':10,'MCCAIN15':15};
+var tickets={'MC7X9K2P':{w:0},'ZT4N8W1Q':{w:10},'BV6R3M5L':{w:0},'HJ2D7Y9K':{w:50},'PF8S1X4G':{w:0},'QN3T6Z2M':{w:100},'WR9V5L8H':{w:0},'KD1P7N4B':{w:10},'XG6M2Y9C':{w:0},'LF4W8K3J':{w:500},'TS7R1Q5D':{w:0},'NZ2X9P6V':{w:10},'MH8L4T1W':{w:0},'BC3N7M9R':{w:50},'YK6S2D8F':{w:0},'VJ1Z5W4P':{w:10},'QL9G3X7N':{w:0},'RT4H8M2K':{w:100},'FB7L1Y6C':{w:0},'DW2N9T5Q':{w:10},'PX6V3K8S':{w:0},'ZM1R7J4G':{w:50},'LC9D2P6H':{w:0},'NK4W8X1B':{w:10},'TF7S3Y9V':{w:0},'QG2M5Z8L':{w:100},'HX6N1Q4R':{w:0},'WJ9T7K2D':{w:10},'BP3L8M6C':{w:0},'VR1Y4P9F':{w:500}};
+var globalScratched=[];
+var orderData=[];
+var state={user:null,cart:[],page:'home',promos:[],comment:'',orderHist:[],code:'',scratching:false,win:0,winNums:[],yourNums:[],used:[],currentPromo:''};
+var canvas,ctx,down=false,pct=0;
+
+async function loadData(){
+  try{
+    var o=await window.storage.get('taverne_orders');
+    if(o&&o.value)orderData=JSON.parse(o.value);
+  }catch(e){}
+  try{
+    var s=await window.storage.get('taverne_scratch');
+    if(s&&s.value)globalScratched=JSON.parse(s.value);
+  }catch(e){}
+}
+
+async function saveOrders(){
+  try{await window.storage.set('taverne_orders',JSON.stringify(orderData))}catch(e){}
+}
+
+async function saveScratch(){
+  try{await window.storage.set('taverne_scratch',JSON.stringify(globalScratched))}catch(e){}
+}
+
+function getUser(){
+  var f=new URLSearchParams(window.location.hash.slice(1)),t=f.get('access_token');
+  if(t)fetch('https://discord.com/api/users/@me',{headers:{authorization:'Bearer '+t}}).then(function(r){return r.json()}).then(function(u){state.user=u;state.page='welcome';window.location.hash='';render()}).catch(console.error)
+}
+
+function login(){window.location.href='https://discord.com/api/oauth2/authorize?client_id='+DISCORD_CLIENT_ID+'&redirect_uri='+encodeURIComponent(REDIRECT_URI)+'&response_type=token&scope=identify'}
+
+function logout(){state={user:null,cart:[],page:'home',promos:[],comment:'',orderHist:[],code:'',scratching:false,win:0,winNums:[],yourNums:[],used:[],currentPromo:''};render()}
+
+function addCart(p){var e=state.cart.find(function(i){return i.id===p.id});if(e)e.quantity++;else state.cart.push(Object.assign({},p,{quantity:1}));render()}
+
+function updateQty(id,q){if(q<=0)state.cart=state.cart.filter(function(i){return i.id!==id});else{var i=state.cart.find(function(i){return i.id===id});if(i)i.quantity=q}render()}
+
+function promoKeyPress(e){if(e.key.length===1&&/[A-Z0-9]/.test(e.key.toUpperCase())){state.currentPromo+=e.key.toUpperCase();render()}}
+
+function addPromo(){var c=state.currentPromo.toUpperCase().trim();if(!c)return;if(promoCodes[c]&&state.promos.indexOf(c)===-1){state.promos.push(c);state.currentPromo='';render()}else if(state.promos.indexOf(c)!==-1){alert('Code déjà utilisé!');state.currentPromo=''}else{alert('Code invalide!');state.currentPromo=''}}
+
+function removePromo(code){state.promos=state.promos.filter(function(p){return p!==code});render()}
+
+function calcSub(){return state.cart.reduce(function(s,i){return s+(i.price*i.quantity)},0)}
+
+function calcDisc(){var total=0;state.promos.forEach(function(p){total+=promoCodes[p]||0});return calcSub()*(total/100)}
+
+function calcTotal(){return calcSub()-calcDisc()}
+
+function order(){
+  if(!state.cart.length){alert('Panier vide!');return}
+  if(!confirm('Confirmer?\n\nTotal: '+calcTotal().toFixed(2)+'€'))return;
+  var username=state.user?state.user.username:'Invité';
+  var userId=state.user?state.user.id:'guest';
+  var o={id:Date.now(),user:username,userId:userId,items:state.cart,sub:calcSub().toFixed(2),disc:calcDisc().toFixed(2),total:calcTotal().toFixed(2),promos:state.promos.join(', ')||'Aucun',comment:state.comment||'Aucun',date:new Date().toLocaleString('fr-FR')};
+  var txt=o.items.map(function(i){return i.emoji+' **'+i.name+'** x'+i.quantity+' - '+(i.price*i.quantity).toFixed(2)+'€'}).join('\n');
+  var e={embeds:[{title:'🍺 Commande',color:0xFFA500,fields:[{name:'👤',value:o.user,inline:true},{name:'📅',value:o.date,inline:true},{name:'🍻',value:txt},{name:'💰',value:'Total: **'+o.total+'€**'},{name:'🎟️',value:o.promos}],timestamp:new Date().toISOString()}]};
+  if(state.comment!=='Aucun')e.embeds[0].fields.push({name:'💬',value:state.comment});
+  fetch(WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(e)}).then(function(r){
+    if(r.ok){
+      orderData.unshift(o);
+      saveOrders();
+      state.orderHist.unshift(o);
+      alert('✅ Commande envoyée!');
+      state.cart=[];
+      state.promos=[];
+      state.comment='';
+      state.page='orderHist';
+      render();
+    }else alert('❌ Erreur')
+  }).catch(function(){alert('❌ Erreur')})
+}
+
+function generateNums(){var n=[];for(var i=0;i<20;i++)n.push(Math.floor(Math.random()*90)+10);return n}
+
+function startScratch(){
+  var c=state.code.toUpperCase().trim();
+  if(!c){alert('Entrez un code!');return}
+  if(!tickets[c]){alert('❌ Code invalide!');return}
+  if(state.used.indexOf(c)!==-1){alert('❌ Code utilisé!');return}
+  state.used.push(c);
+  var t=tickets[c],w=[],nums=generateNums();
+  for(var i=0;i<6;i++)w.push(nums[Math.floor(Math.random()*20)]);
+  if(t.w>0){var replaceIdx=Math.floor(Math.random()*20);for(var j=0;j<Math.min(3,6);j++){nums[replaceIdx]=w[j];replaceIdx=(replaceIdx+4)%20}}
+  state.winNums=w;
+  state.yourNums=nums;
+  state.win=t.w;
+  state.scratching=true;
+  render();
+  setTimeout(function(){initCanvas()},100)
+}
+
+function initCanvas(){
+  canvas=document.getElementById('canvas');
+  if(!canvas)return;
+  ctx=canvas.getContext('2d');
+  canvas.width=canvas.parentElement.offsetWidth;
+  canvas.height=canvas.parentElement.offsetHeight;
+  var g=ctx.createLinearGradient(0,0,canvas.width,canvas.height);
+  g.addColorStop(0,'#4169E1');
+  g.addColorStop(1,'#1E90FF');
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.font='bold 24px Inter';
+  ctx.fillStyle='white';
+  ctx.textAlign='center';
+  ctx.fillText('GRATTEZ POUR RÉVÉLER',canvas.width/2,canvas.height/2-20);
+  ctx.font='40px Arial';
+  ctx.fillText('💵',canvas.width/2,canvas.height/2+30);
+  canvas.addEventListener('mousedown',function(){down=true});
+  canvas.addEventListener('mouseup',function(){down=false});
+  canvas.addEventListener('mousemove',scratch);
+  canvas.addEventListener('touchstart',function(e){e.preventDefault();down=true});
+  canvas.addEventListener('touchend',function(){down=false});
+  canvas.addEventListener('touchmove',function(e){e.preventDefault();scratch(e.touches[0])})
+}
+
+function scratch(e){
+  if(!down)return;
+  var r=canvas.getBoundingClientRect(),x=(e.clientX||e.pageX)-r.left,y=(e.clientY||e.pageY)-r.top;
+  ctx.globalCompositeOperation='destination-out';
+  ctx.beginPath();
+  ctx.arc(x,y,40,0,Math.PI*2);
+  ctx.fill();
+  check()
+}
+
+function check(){
+  var d=ctx.getImageData(0,0,canvas.width,canvas.height).data,t=0;
+  for(var i=3;i<d.length;i+=4)if(d[i]===0)t++;
+  pct=(t/(d.length/4))*100;
+  if(pct>70)reveal()
+}
+
+function reveal(){
+  down=false;
+  var s={user:state.user?state.user.username:'Invité',userId:state.user?state.user.id:'guest',code:state.code,win:state.win,date:new Date().toLocaleString('fr-FR')};
+  globalScratched.push(s);
+  saveScratch();
+  var e={embeds:[{title:'🎰 Ticket',color:state.win>0?0x00FF00:0xFF0000,fields:[{name:'👤',value:s.user,inline:true},{name:'🎟️',value:s.code,inline:true},{name:state.win>0?'🎉 GAGNÉ!':'😢 Perdu',value:state.win>0?'**'+state.win+'€**':'Pas de gain'},{name:'📅',value:s.date}],timestamp:new Date().toISOString()}]};
+  fetch(WEBHOOK_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(e)});
+  setTimeout(function(){
+    if(state.win>0)alert('🎉 Gagné '+state.win+'€!');
+    else alert('😢 Pas de gain...');
+    state.scratching=false;
+    state.code='';
+    pct=0;
+    state.page='scratchList';
+    render()
+  },500)
 }
 
 function render(){
-  const app=document.getElementById('app');
-  
-  const nav=`
-    <nav class="bg-white shadow-sm border-b border-gray-200">
-      <div class="container mx-auto px-4 py-4">
-        <div class="flex items-center justify-between">
-          <button onclick="state.page='home';render()" class="text-2xl font-bold text-orange-600 hover:text-orange-700">
-            🍺 Taverne McCain
-          </button>
-          <div class="flex gap-2">
-            <button onclick="state.page='home';render()" class="nav-link">🏠 Accueil</button>
-            <button onclick="state.page='shop';render()" class="nav-link">🛒 Commander</button>
-            <button onclick="state.page='scratch';render()" class="nav-link">🎰 Tickets</button>
-            ${state.user?
-              `<button onclick="state.page='profile';render()" class="nav-link">👤 ${state.user.username}</button>
-              <button onclick="logout()" class="nav-link text-red-600">Déconnexion</button>`:
-              `<button onclick="login()" class="btn-primary">Connexion</button>`
-            }
-          </div>
-        </div>
-      </div>
-    </nav>
-  `;
+  var app=document.getElementById('app');
+  var nav=state.user?'<nav class="bg-white shadow-sm border-b"><div class="container mx-auto px-4 py-4"><div class="flex items-center justify-between flex-wrap gap-4"><button onclick="state.page=\'home\';render()" class="text-2xl font-bold text-orange-600">🍺 Taverne McCain</button><div class="flex gap-2 flex-wrap"><button onclick="state.page=\'home\';render()" class="px-3 py-2 rounded hover:bg-gray-100">🏠</button><button onclick="state.page=\'shop\';render()" class="px-3 py-2 rounded hover:bg-gray-100">🛒</button><button onclick="state.page=\'scratchList\';render()" class="px-3 py-2 rounded hover:bg-gray-100">🎰</button><button onclick="state.page=\'profile\';render()" class="px-3 py-2 rounded hover:bg-gray-100">👤</button><button onclick="logout()" class="px-3 py-2 rounded hover:bg-red-100 text-red-600">Déco</button></div></div></div></nav>':'<nav class="bg-white shadow-sm border-b"><div class="container mx-auto px-4 py-4"><div class="flex items-center justify-between flex-wrap gap-4"><button onclick="state.page=\'home\';render()" class="text-2xl font-bold text-orange-600">🍺 Taverne McCain</button><div class="flex gap-2"><button onclick="state.page=\'home\';render()" class="px-3 py-2 rounded hover:bg-gray-100">🏠</button><button onclick="state.page=\'shop\';render()" class="px-3 py-2 rounded hover:bg-gray-100">🛒</button><button onclick="state.page=\'scratch\';render()" class="px-3 py-2 rounded hover:bg-gray-100">🎰</button><button onclick="login()" class="px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700">Connexion</button></div></div></div></nav>';
   
   if(state.page==='home'){
-    app.innerHTML=nav+`
-      <div class="container mx-auto px-4 py-12">
-        <div class="max-w-6xl mx-auto">
-          <div class="text-center mb-16">
-            <div class="text-6xl mb-4">🍺</div>
-            <h1 class="text-5xl font-bold text-gray-900 mb-4">Taverne McCain</h1>
-            <p class="text-xl text-gray-600">Bienvenue dans notre bar en ligne</p>
-          </div>
-          
-          <div class="grid md:grid-cols-2 gap-8 mb-16">
-            <button onclick="state.page='shop';render()" class="card p-8 hover:shadow-xl">
-              <div class="text-5xl mb-4">🛒</div>
-              <h2 class="text-2xl font-bold text-gray-900 mb-2">Commander</h2>
-              <p class="text-gray-600">Découvrez nos boissons et snacks</p>
-            </button>
-            <button onclick="state.page='scratch';render()" class="card p-8 hover:shadow-xl">
-              <div class="text-5xl mb-4">🎰</div>
-              <h2 class="text-2xl font-bold text-gray-900 mb-2">Tickets à Gratter</h2>
-              <p class="text-gray-600">Tentez de gagner jusqu'à 500€</p>
-            </button>
-          </div>
-          
-          <div class="card p-8 mb-8">
-            <h2 class="text-3xl font-bold text-gray-900 mb-6">👥 Notre Équipe</h2>
-            <div class="grid md:grid-cols-3 gap-6">
-              <div class="text-center p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg">
-                <div class="text-4xl mb-3">👔</div>
-                <h3 class="font-bold text-lg text-gray-900">Owen McCain</h3>
-                <p class="text-orange-600 font-medium">PDG du Groupe McCain</p>
-              </div>
-              <div class="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg">
-                <div class="text-4xl mb-3">💼</div>
-                <h3 class="font-bold text-lg text-gray-900">Benjamin McCain</h3>
-                <p class="text-blue-600 font-medium">PDG Taverne McCain</p>
-              </div>
-              <div class="text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg">
-                <div class="text-4xl mb-3">🎯</div>
-                <h3 class="font-bold text-lg text-gray-900">Meneham Pininfarinna</h3>
-                <p class="text-purple-600 font-medium">Co-PDG</p>
-              </div>
-            </div>
-          </div>
-          
-          <div class="card p-8">
-            <h2 class="text-3xl font-bold text-gray-900 mb-6">🤝 Nos Partenaires</h2>
-            <div class="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border-2 border-green-200">
-              <div class="flex items-center gap-4 mb-4">
-                <div class="text-5xl">🌱</div>
-                <div>
-                  <h3 class="text-2xl font-bold text-green-700">La Graine Magique</h3>
-                  <p class="text-gray-700 mt-2">Découvrez les services de La Graine Magique en rejoignant leur Discord!</p>
-                </div>
-              </div>
-              <a href="#" class="inline-block mt-4 px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition">
-                Rejoindre le Discord
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-  else if(state.page==='shop'){
-    renderShop(app,nav);
-  }
-  else if(state.page==='scratch'){
-    renderScratch(app,nav);
-  }
-  else if(state.page==='profile'){
-    renderProfile(app,nav);
+    app.innerHTML=nav+'<div class="container mx-auto px-4 py-8"><div class="max-w-6xl mx-auto"><div class="text-center mb-12"><div class="text-6xl mb-4">🍺</div><h1 class="text-5xl font-bold text-gray-900 mb-4">Taverne McCain</h1><p class="text-xl text-gray-600">Bienvenue dans notre bar en ligne</p></div><div class="grid md:grid-cols-2 gap-6 mb-12"><button onclick="state.page=\'shop\';render()" class="card p-8 text-center hover:shadow-xl"><div class="text-5xl mb-4">🛒</div><h2 class="text-2xl font-bold mb-2">Commander</h2><p class="text-gray-600">Boissons et snacks</p></button><button onclick="state.page=\'scratch\';render()" class="card p-8 text-center hover:shadow-xl"><div class="text-5xl mb-4">🎰</div><h2 class="text-2xl font-bold mb-2">Tickets à Gratter</h2><p class="text-gray-600">Gagnez jusqu\'à 500€</p></button></div><div class="card p-8 mb-8"><h2 class="text-3xl font-bold mb-6">👥 Notre Équipe</h2><div class="grid md:grid-cols-3 gap-6"><div class="text-center p-6 bg-gradient-to-br from-orange-50 to-orange-100 rounded-lg"><div class="text-4xl mb-3">👔</div><h3 class="font-bold text-lg">Owen McCain</h3><p class="text-orange-600 text-sm">PDG du Groupe McCain</p></div><div class="text-center p-6 bg-gradient-to-br from-blue-50 to-blue-100 rounded-lg"><div class="text-4xl mb-3">💼</div><h3 class="font-bold text-lg">Benjamin McCain</h3><p class="text-blue-600 text-sm">PDG Taverne McCain</p></div><div class="text-center p-6 bg-gradient-to-br from-purple-50 to-purple-100 rounded-lg"><div class="text-4xl mb-3">🎯</div><h3 class="font-bold text-lg">Meneham Pininfarinna</h3><p class="text-purple-600 text-sm">Co-PDG</p></div></div></div><div class="card p-8"><h2 class="text-3xl font-bold mb-6">🤝 Nos Partenaires</h2><div class="bg-gradient-to-r from-green-50 to-emerald-50 p-6 rounded-lg border-2 border-green-200"><div class="flex items-center gap-4 mb-4"><div class="text-5xl">🌱</div><div><h3 class="text-2xl font-bold text-green-700">La Graine Magique</h3><p class="text-gray-700 mt-2">Découvrez les services de La Graine Magique en rejoignant leur Discord!</p></div></div></div></div></div></div>'
+  }else if(state.page==='welcome'){
+    app.innerHTML=nav+'<div class="container mx-auto px-4 py-12"><div class="max-w-4xl mx-auto text-center"><div class="card p-12"><h1 class="text-5xl font-bold text-orange-600 mb-4">Bienvenue '+state.user.username+'!</h1><div class="grid md:grid-cols-2 gap-6 mt-8"><button onclick="state.page=\'shop\';render()" class="card p-8 hover:shadow-xl"><div class="text-5xl mb-4">🛒</div><div class="text-2xl font-bold">Commander</div></button><button onclick="state.page=\'scratchList\';render()" class="card p-8 hover:shadow-xl"><div class="text-5xl mb-4">🎰</div><div class="text-2xl font-bold">Tickets</div></button></div></div></div></div>'
+  }else if(state.page==='scratchList'){
+    app.innerHTML=nav+'<div class="container mx-auto px-4 py-8"><div class="max-w-4xl mx-auto"><h2 class="text-3xl font-bold mb-6 text-center">🎰 Classement</h2><div class="card p-6 mb-6"><button onclick="state.page=\'scratch\';render()" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-4 rounded-xl text-xl">➕ Gratter un Ticket</button></div><div class="card p-6">'+(globalScratched.length===0?'<p class="text-center text-gray-500 py-8">Aucun ticket gratté</p>':'<div class="space-y-3">'+globalScratched.map(function(s,i){return'<div class="flex items-center justify-between p-4 '+(s.win>0?'bg-green-50 border-2 border-green-500':'bg-gray-50')+' rounded-lg"><div class="flex items-center gap-4"><div class="text-2xl font-bold text-gray-400">#'+(i+1)+'</div><div><p class="font-bold">'+s.user+'</p><p class="text-sm text-gray-600">'+s.code+'</p><p class="text-xs text-gray-500">'+s.date+'</p></div></div><div class="text-right"><p class="text-2xl font-bold '+(s.win>0?'text-green-600':'text-gray-400')+'">'+(s.win>0?'+'+s.win+'€':'0€')+'</p></div></div>'}).join('')+'</div>')+'</div></div></div>'
+  }else if(state.page==='scratch'){
+    if(!state.scratching){
+      app.innerHTML=nav+'<div class="container mx-auto px-4 py-8"><div class="max-w-2xl mx-auto"><div class="card p-8"><h2 class="text-3xl font-bold text-center mb-6">🎰 Gratter un Ticket</h2><div class="bg-gradient-to-r from-purple-100 to-pink-100 p-6 rounded-xl mb-6"><p class="text-center text-lg mb-4 font-semibold">Code ticket</p><input type="text" value="'+state.code+'" oninput="state.code=this.value.toUpperCase()" placeholder="MC7X9K2P" class="w-full px-4 py-3 border-2 border-purple-300 rounded-lg mb-4 text-center text-lg font-bold uppercase" maxlength="8"><button onclick="startScratch()" class="w-full bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold py-4 rounded-lg text-xl">🎫 Gratter</button></div><button onclick="state.page=\'scratchList\';render()" class="w-full bg-orange-600 text-white font-bold py-3 rounded-lg">📊 Classement</button></div></div></div>'
+    }else{
+      app.innerHTML=nav+'<div class="container mx-auto px-4 py-8"><div class="max-w-3xl mx-auto"><div class="card p-8"><div class="scratch-ticket"><div class="ticket-header"><div class="nouveau-badge">NOUVEAU!</div><div class="price-badge">5€</div><div class="text-center mt-8"><div class="illiko-badge">🍺 illiko</div></div></div><div class="jackpot-title">JACKPOT</div><div class="jackpot-amount">500 000€</div><div class="winning-section"><p class="section-title">NUMÉROS GAGNANTS</p><div class="winning-grid">'+state.winNums.map(function(n){return'<div class="winning-item">'+n+'</div>'}).join('')+'</div></div><div class="scratch-section"><p class="section-title">VOS NUMÉROS</p><div class="number-grid">'+state.yourNums.map(function(n){var isWin=state.winNums.indexOf(n)!==-1;return'<div class="money-item '+(isWin?'winner':'')+'">'+n+'</div>'}).join('')+'</div><canvas id="canvas" class="scratch-canvas"></canvas></div><div class="footer-text">* 500 000€ = GAIN MAXIMUM</div></div></div></div></div>'
+    }
+  }else if(state.page==='shop'){
+    renderShop(app,nav)
+  }else if(state.page==='profile'){
+    if(!state.user){state.page='home';render();return}
+    var userOrders=orderData.filter(function(o){return o.userId===state.user.id});
+    app.innerHTML=nav+'<div class="container mx-auto px-4 py-8"><div class="max-w-4xl mx-auto"><div class="card p-8 mb-6"><h2 class="text-3xl font-bold mb-6">👤 Mon Profil</h2><div class="flex items-center gap-4 p-4 bg-gray-50 rounded-lg mb-4"><img src="https://cdn.discordapp.com/avatars/'+state.user.id+'/'+state.user.avatar+'.png" class="w-20 h-20 rounded-full shadow-lg"/><div><p class="font-bold text-2xl">'+state.user.username+'</p><p class="text-gray-600 text-sm">ID: '+state.user.id+'</p></div></div><div class="grid md:grid-cols-2 gap-4"><div class="p-4 bg-orange-50 rounded-lg"><p class="text-sm text-gray-600">Commandes</p><p class="font-bold text-2xl text-orange-600">'+userOrders.length+'</p></div><div class="p-4 bg-purple-50 rounded-lg"><p class="text-sm text-gray-600">Tickets Grattés</p><p class="font-bold text-2xl text-purple-600">'+globalScratched.filter(function(s){return s.userId===state.user.id}).length+'</p></div></div></div><div class="card p-8"><h3 class="text-2xl font-bold mb-4">📦 Mes Commandes</h3>'+(userOrders.length===0?'<p class="text-gray-500 text-center py-8">Aucune commande</p>':userOrders.map(function(o,i){return'<div class="card p-6 mb-4"><div class="flex justify-between items-center mb-4"><div><p class="text-lg font-bold">Commande #'+(userOrders.length-i)+'</p><p class="text-sm text-gray-600">'+o.date+'</p></div><p class="text-2xl font-bold text-orange-600">'+o.total+'€</p></div><div class="border-t pt-4"><p class="font-semibold mb-2">Articles:</p>'+o.items.map(function(it){return'<p class="text-sm text-gray-600">'+it.emoji+' '+it.name+' x'+it.quantity+' - '+(it.price*it.quantity).toFixed(2)+'€</p>'}).join('')+(o.comment!=='Aucun'?'<div class="mt-3 p-3 bg-gray-50 rounded-lg"><p class="text-xs text-gray-600">Commentaire:</p><p class="text-sm">'+o.comment+'</p></div>':'')+'</div></div>'}).join(''))+'</div></div></div>'
+  }else if(state.page==='orderHist'){
+    var hist='';if(!state.orderHist.length)hist='<div class="card p-8 text-center"><div class="text-6xl mb-4">📦</div><p class="text-gray-500">Aucune commande</p></div>';else hist='<div class="space-y-4">'+state.orderHist.map(function(o,i){var items='';o.items.forEach(function(it){items+='<p class="text-sm text-gray-700">'+it.emoji+' '+it.name+' x'+it.quantity+' - '+(it.price*it.quantity).toFixed(2)+'€</p>'});var comm='';if(o.comment!=='Aucun')comm='<div class="mt-3 p-3 bg-gray-50 rounded-lg"><p class="text-xs text-gray-600">Commentaire:</p><p class="text-sm">'+o.comment+'</p></div>';return'<div class="card p-6"><div class="flex justify-between mb-4"><div><p class="text-lg font-bold text-orange-600">Commande #'+(state.orderHist.length-i)+'</p><p class="text-sm text-gray-600">'+o.date+'</p></div><p class="text-2xl font-bold text-orange-600">'+o.total+'€</p></div><div class="border-t pt-4"><p class="font-semibold mb-2">Articles:</p><div class="space-y-1">'+items+'</div>'+comm+'</div></div>'}).join('')+'</div>';app.innerHTML=nav+'<div class="container mx-auto px-4 py-8"><div class="max-w-4xl mx-auto"><h2 class="text-3xl font-bold mb-6">Mes Commandes</h2>'+hist+'</div></div>'
   }
 }
 
 function renderShop(app,nav){
-  let productsHTML='';
-  for(let category in products){
-    let items='';
-    products[category].forEach(p=>{
-      items+=`
-        <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg hover:bg-gray-100 transition">
-          <div class="flex items-center gap-3">
-            <span class="text-3xl">${p.emoji}</span>
-            <div>
-              <p class="font-semibold text-gray-900">${p.name}</p>
-              <p class="text-sm text-gray-600">${p.price.toFixed(2)}€</p>
-            </div>
-          </div>
-          <button onclick='addToCart(${JSON.stringify(p)})' class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition">
-            Ajouter
-          </button>
-        </div>
-      `;
-    });
-    productsHTML+=`
-      <div class="card p-6">
-        <h2 class="text-2xl font-bold text-gray-900 mb-4 capitalize">${category}</h2>
-        <div class="space-y-2">${items}</div>
-      </div>
-    `;
-  }
-  
-  let cartHTML='';
-  if(!state.cart.length){
-    cartHTML='<p class="text-gray-500 text-center py-8">Votre panier est vide</p>';
-  }else{
-    let items='';
-    state.cart.forEach(item=>{
-      items+=`
-        <div class="bg-gray-50 p-4 rounded-lg">
-          <div class="flex justify-between items-center mb-3">
-            <span class="font-semibold text-gray-900">${item.emoji} ${item.name}</span>
-            <button onclick="updateQuantity('${item.id}',0)" class="text-red-600 hover:text-red-700">✕</button>
-          </div>
-          <div class="flex justify-between items-center">
-            <div class="flex items-center gap-3 bg-white rounded-lg px-3 py-2">
-              <button onclick="updateQuantity('${item.id}',${item.quantity-1})" class="text-orange-600 font-bold">−</button>
-              <span class="font-bold w-8 text-center">${item.quantity}</span>
-              <button onclick="updateQuantity('${item.id}',${item.quantity+1})" class="text-orange-600 font-bold">+</button>
-            </div>
-            <span class="font-bold text-orange-600">${(item.price*item.quantity).toFixed(2)}€</span>
-          </div>
-        </div>
-      `;
-    });
-    
-    let promosHTML='';
-    if(state.promos.length>0){
-      promosHTML=state.promos.map(p=>`
-        <div class="flex items-center justify-between bg-green-50 p-2 rounded-lg">
-          <span class="text-green-700 font-medium text-sm">${p} (-${promoCodes[p]}%)</span>
-          <button onclick="removePromo('${p}')" class="text-red-600 text-sm">✕</button>
-        </div>
-      `).join('');
-    }
-    
-    let discountHTML='';
-    if(calculateDiscount()>0){
-      discountHTML=`<div class="flex justify-between text-green-600"><span>Réduction:</span><span>-${calculateDiscount().toFixed(2)}€</span></div>`;
-    }
-    
-    cartHTML=`
-      <div class="space-y-3 mb-4 max-h-80 overflow-y-auto">${items}</div>
-      <div class="border-t pt-4 space-y-3">
-        <div class="flex justify-between text-sm text-gray-600">
-          <span>Sous-total:</span>
-          <span>${calculateSubtotal().toFixed(2)}€</span>
-        </div>
-        <div class="space-y-2">
-          <div class="text-sm font-semibold text-gray-700">Code promo:</div>
-          ${promosHTML}
-          <div class="flex gap-2">
-            <input type="text" value="${state.currentPromo}" oninput="state.currentPromo=this.value.toUpperCase()" placeholder="CODE" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg text-sm uppercase" maxlength="15">
-            <button onclick="addPromoCode()" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700">✓</button>
-          </div>
-        </div>
-        ${discountHTML}
-        <div class="flex justify-between text-lg font-bold text-orange-600 border-t pt-3">
-          <span>Total:</span>
-          <span>${calculateTotal().toFixed(2)}€</span>
-        </div>
-        <textarea oninput="state.comment=this.value" placeholder="Commentaire (optionnel)" class="w-full px-3 py-2 border border-gray-300 rounded-lg resize-none text-sm" rows="2">${state.comment}</textarea>
-        <button onclick="placeOrder()" class="btn-primary w-full">Passer Commande</button>
-      </div>
-    `;
-  }
-  
-  app.innerHTML=nav+`
-    <div class="container mx-auto px-4 py-8">
-      <div class="grid lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 space-y-6">${productsHTML}</div>
-        <div class="lg:col-span-1">
-          <div class="card p-6 sticky top-6">
-            <h2 class="text-2xl font-bold text-gray-900 mb-4">🛒 Panier</h2>
-            ${cartHTML}
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
+  var prods='';for(var cat in products){var items='';products[cat].forEach(function(p){items+='<div class="flex items-center justify-between bg-gray-50 p-4 rounded-lg hover:bg-gray-100"><div class="flex items-center gap-3"><span class="text-3xl">'+p.emoji+'</span><div><p class="font-semibold">'+p.name+'</p><p class="text-sm text-gray-600">'+p.price.toFixed(2)+'€</p></div></div><button onclick="addCart('+JSON.stringify(p).replace(/"/g,'&quot;')+')" class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700">+</button></div>'});prods+='<div class="card p-6"><h2 class="text-2xl font-bold mb-4 capitalize">'+cat+'</h2><div class="space-y-2">'+items+'</div></div>'}
+  var cart='';if(!state.cart.length){cart='<p class="text-gray-500 text-center py-8">Panier vide</p>'}else{var items='';state.cart.forEach(function(i){items+='<div class="bg-gray-50 p-3 rounded-lg"><div class="flex justify-between mb-2"><span class="font-semibold">'+i.emoji+' '+i.name+'</span><button onclick="updateQty(\''+i.id+'\',0)" class="text-red-600">✕</button></div><div class="flex justify-between"><div class="flex items-center gap-2 bg-white rounded px-2 py-1"><button onclick="updateQty(\''+i.id+'\','+(i.quantity-1)+')" class="text-orange-600">−</button><span class="font-bold w-8 text-center">'+i.quantity+'</span><button onclick="updateQty(\''+i.id+'\','+(i.quantity+1)+')" class="text-orange-600">+</button></div><span class="font-bold text-orange-600">'+(i.price*i.quantity).toFixed(2)+'€</span></div></div>'});var promosHTML='';if(state.promos.length>0){promosHTML='<div class="space-y-2">'+state.promos.map(function(p){return'<div class="flex items-center justify-between bg-green-50 p-2 rounded"><span class="text-green-600 font-bold text-sm">'+p+' (-'+promoCodes[p]+'%)</span><button onclick="removePromo(\''+p+'\')" class="text-red-600 text-xs">✕</button></div>'}).join('')+'</div>'}var disc='';if(calcDisc()>0)disc='<div class="flex justify-between text-sm text-green-600"><span>Réduction:</span><span>-'+calcDisc().toFixed(2)+'€</span></div>';cart='<div class="space-y-3 mb-4 max-h-64 overflow-y-auto">'+items+'</div><div class="border-t pt-4 space-y-3"><div class="flex justify-between text-sm"><span>Sous-total:</span><span>'+calcSub().toFixed(2)+'€</span></div><div class="space-y-2"><div class="text-sm font-semibold">Codes promo:</div>'+promosHTML+'<div class="flex gap-2"><input type="text" value="'+state.currentPromo+'" onkeypress="promoKeyPress(event)" placeholder="Code" class="flex-1 px-3 py-2 border rounded-lg text-sm uppercase" maxlength="10"><button onclick="addPromo()" class="bg-purple-600 text-white px-4 py-2 rounded-lg text-sm">✓</button></div></div>'+disc+'<div class="flex justify-between text-lg font-bold text-orange-600 border-t pt-2"><span>Total:</span><span>'+calcTotal().toFixed(2)+'€</span></div><textarea oninput="state.comment=this.value" placeholder="Commentaire" class="w-full px-3 py-2 border rounded-lg resize-none text-sm" rows="3">'+state.comment+'</textarea><button onclick="order()" class="w-full bg-orange-600 text-white font-bold py-3 rounded-lg hover:bg-orange-700">Commander</button></div>'}
+  app.innerHTML=nav+'<div class="container mx-auto px-4 py-8"><div class="grid lg:grid-cols-3 gap-6"><div class="lg:col-span-2 space-y-6">'+prods+'</div><div class="lg:col-span-1"><div class="card p-6 sticky top-6"><h2 class="text-2xl font-bold mb-4">🛒 Panier</h2>'+cart+'</div></div></div></div>'
 }
 
-function renderScratch(app,nav){
-  if(!state.scratching){
-    app.innerHTML=nav+`
-      <div class="container mx-auto px-4 py-8">
-        <div class="max-w-2xl mx-auto">
-          <div class="card p-8 mb-6">
-            <h2 class="text-3xl font-bold text-gray-900 mb-6 text-center">🎰 Ticket à Gratter</h2>
-            <div class="bg-gradient-to-r from-orange-50 to-orange-100 p-6 rounded-lg mb-6">
-              <p class="text-center text-lg mb-4 font-semibold text-gray-800">Entrez votre code ticket</p>
-              <input type="text" value="${state.code}" oninput="state.code=this.value.toUpperCase()" placeholder="MC7X9K2P" class="w-full px-4 py-3 border-2 border-orange-300 rounded-lg mb-4 text-center text-lg font-bold uppercase" maxlength="8">
-              <button onclick="startScratch()" class="btn-primary w-full text-lg">🎫 Gratter le Ticket</button>
-            </div>
-            <div class="text-center text-sm text-gray-500">
-              <p>Gains possibles: 10€, 50€, 100€, 500€</p>
-            </div>
-          </div>
-          
-          <div class="card p-6">
-            <h3 class="text-xl font-bold text-gray-900 mb-4">📊 Historique des Gains</h3>
-            ${scratchData.length===0?'<p class="text-gray-500 text-center py-4">Aucun ticket gratté</p>':
-              scratchData.slice(0,10).map((s,i)=>`
-                <div class="flex items-center justify-between p-3 ${s.win>0?'bg-green-50 border-l-4 border-green-500':'bg-gray-50'} rounded-lg mb-2">
-                  <div>
-                    <p class="font-semibold text-gray-900">${s.user}</p>
-                    <p class="text-xs text-gray-600">${s.code} - ${s.date}</p>
-                  </div>
-                  <p class="text-xl font-bold ${s.win>0?'text-green-600':'text-gray-400'}">${s.win>0?'+'+s.win+'€':'0€'}</p>
-                </div>
-              `).join('')
-            }
-          </div>
-        </div>
-      </div>
-    `;
-  }else{
-    app.innerHTML=nav+`
-      <div class="container mx-auto px-4 py-8">
-        <div class="max-w-2xl mx-auto">
-          <div class="scratch-ticket">
-            <div class="bg-gradient-to-r from-orange-500 to-orange-600 p-6 text-center text-white">
-              <h2 class="text-3xl font-bold mb-2">🎰 TAVERNE MCCAIN</h2>
-              <p class="text-lg">Ticket à Gratter</p>
-            </div>
-            
-            <div class="p-6 bg-purple-50">
-              <p class="text-center font-bold text-gray-700 mb-4">NUMÉROS GAGNANTS</p>
-              <div class="grid grid-cols-6 gap-2">
-                ${state.winNums.map(n=>`
-                  <div class="bg-gradient-to-br from-yellow-400 to-yellow-500 text-center py-3 rounded-lg font-bold text-xl text-yellow-900 shadow-md">${n}</div>
-                `).join('')}
-              </div>
-            </div>
-            
-            <div class="p-6 relative" style="min-height:300px">
-              <p class="text-center font-bold text-gray-700 mb-4">VOS NUMÉROS</p>
-              <div class="grid grid-cols-5 gap-2 relative z-0">
-                ${state.yourNums.map(n=>{
-                  const isWinner=state.winNums.includes(n);
-                  return`<div class="bg-gradient-to-br ${isWinner?'from-green-400 to-green-500':'from-gray-200 to-gray-300'} text-center py-4 rounded-lg font-bold text-lg ${isWinner?'text-green-900':'text-gray-700'} shadow">${n}</div>`;
-                }).join('')}
-              </div>
-              <canvas id="scratchCanvas" class="scratch-canvas"></canvas>
-            </div>
-            
-            <div class="bg-gray-800 text-white text-center p-4 text-sm">
-              <p>Grattez pour découvrir si vous avez gagné!</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    `;
-  }
-}
-
-function renderProfile(app,nav){
-  if(!state.user){
-    state.page='home';
-    render();
-    return;
-  }
-  
-  const userOrders=orderData.filter(o=>o.userId===state.user.id);
-  
-  app.innerHTML=nav+`
-    <div class="container mx-auto px-4 py-8">
-      <div class="max-w-4xl mx-auto">
-        <div class="card p-8 mb-6">
-          <h2 class="text-3xl font-bold text-gray-900 mb-6">👤 Mon Profil</h2>
-          <div class="flex items-center gap-4 p-4 bg-gray-50 rounded-lg mb-4">
-            <img src="https://cdn.discordapp.com/avatars/${state.user.id}/${state.user.avatar}.png" class="w-20 h-20 rounded-full shadow-lg"/>
-            <div>
-              <p class="font-bold text-2xl text-gray-900">${state.user.username}</p>
-              <p class="text-gray-600">ID: ${state.user.id}</p>
-            </div>
-          </div>
-          <div class="grid md:grid-cols-2 gap-4">
-            <div class="p-4 bg-orange-50 rounded-lg">
-              <p class="text-sm text-gray-600">Total Commandes</p>
-              <p class="font-bold text-2xl text-orange-600">${userOrders.length}</p>
-            </div>
-            <div class="p-4 bg-purple-50 rounded-lg">
-              <p class="text-sm text-gray-600">Tickets Grattés</p>
-              <p class="font-bold text-2xl text-purple-600">${scratchData.filter(s=>s.userId===state.user.id).length}</p>
-            </div>
-          </div>
-        </div>
-        
-        <div class="card p-8">
-          <h3 class="text-2xl font-bold text-gray-900 mb-4">📦 Mes Commandes</h3>
-          ${userOrders.length===0?'<p class="text-gray-500 text-center py-8">Aucune commande</p>':
-            userOrders.map((o,i)=>`
-              <div class="card p-6 mb-4">
-                <div class="flex justify-between items-center mb-4">
-                  <div>
-                    <p class="text-lg font-bold text-gray-900">Commande #${userOrders.length-i}</p>
-                    <p class="text-sm text-gray-600">${o.date}</p>
-                  </div>
-                  <p class="text-2xl font-bold text-orange-600">${o.total}€</p>
-                </div>
-                <div class="border-t pt-4">
-                  <p class="font-semibold text-gray-700 mb-2">Articles:</p>
-                  ${o.items.map(it=>`
-                    <p class="text-sm text-gray-600">${it.emoji} ${it.name} x${it.quantity} - ${(it.price*it.quantity).toFixed(2)}€</p>
-                  `).join('')}
-                  ${o.comment!=='Aucun'?`<div class="mt-3 p-3 bg-gray-50 rounded-lg"><p class="text-xs text-gray-600">Commentaire:</p><p class="text-sm text-gray-700">${o.comment}</p></div>`:''}
-                </div>
-              </div>
-            `).join('')
-          }
-        </div>
-      </div>
-    </div>
-  `;
-}
-
-window.addEventListener('load',async()=>{
-  await loadOrders();
-  await loadScratch();
-  getUser();
-  render();
-});
+window.addEventListener('load',function(){loadData().then(function(){getUser();render()})});
 </script>
 </body>
 </html>
