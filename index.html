@@ -62,21 +62,43 @@ var orderData=[];
 var state={user:null,cart:[],page:'home',promos:[],comment:'',orderHist:[],code:'',scratching:false,win:0,winNums:[],yourNums:[],used:[],currentPromo:''};
 var canvas,ctx,down=false,pct=0;
 
-// Charger les tickets depuis tickets.json
+// Charger les tickets depuis tickets.json ou GitHub raw
 async function loadTickets(){
+  // URL GitHub raw - Remplacez par votre lien
+  var GITHUB_TICKETS_URL='https://raw.githubusercontent.com/TheAmazingArtixx/Taverne-McCain---LS/refs/heads/main/tickets.json';
+  
+  try{
+    // Essayer d'abord GitHub
+    var response=await fetch(GITHUB_TICKETS_URL);
+    if(response.ok){
+      tickets=await response.json();
+      console.log('Tickets chargés depuis GitHub:',Object.keys(tickets).length);
+      return;
+    }
+  }catch(e){
+    console.log('GitHub non accessible, essai local...');
+  }
+  
+  // Fallback sur le fichier local
   try{
     var response=await fetch('./tickets.json');
     if(response.ok){
       tickets=await response.json();
-      console.log('Tickets chargés:',Object.keys(tickets).length);
-    }else{
-      console.warn('tickets.json non trouvé, utilisation des tickets par défaut');
-      tickets={'MC7X9K2P':{w:0},'ZT4N8W1Q':{w:10},'BV6R3M5L':{w:0},'HJ2D7Y9K':{w:50},'PF8S1X4G':{w:0},'QN3T6Z2M':{w:100},'WR9V5L8H':{w:0},'KD1P7N4B':{w:10},'XG6M2Y9C':{w:0},'LF4W8K3J':{w:500}};
+      console.log('Tickets chargés localement:',Object.keys(tickets).length);
+      return;
     }
   }catch(e){
-    console.warn('Erreur chargement tickets.json, utilisation des tickets par défaut');
-    tickets={'MC7X9K2P':{w:0},'ZT4N8W1Q':{w:10},'BV6R3M5L':{w:0},'HJ2D7Y9K':{w:50},'PF8S1X4G':{w:0},'QN3T6Z2M':{w:100},'WR9V5L8H':{w:0},'KD1P7N4B':{w:10},'XG6M2Y9C':{w:0},'LF4W8K3J':{w:500}};
+    console.log('Fichier local non trouvé');
   }
+  
+  // Si rien ne fonctionne, tickets par défaut
+  console.warn('Utilisation des tickets par défaut');
+  tickets={
+    'MC7X9K2P':{w:0},'ZT4N8W1Q':{w:10},'BV6R3M5L':{w:0},
+    'HJ2D7Y9K':{w:50},'PF8S1X4G':{w:0},'QN3T6Z2M':{w:100},
+    'WR9V5L8H':{w:0},'KD1P7N4B':{w:10},'XG6M2Y9C':{w:0},
+    'LF4W8K3J':{w:500}
+  };
 }
 
 // Fonctions Supabase
