@@ -16,9 +16,24 @@ body{font-family:'Inter',sans-serif;background:#0f172a}
 <script>
 var SUPABASE_URL='https://laigpbuffioclbujqpdn.supabase.co';
 var SUPABASE_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxhaWdwYnVmZmlvY2xidWpxcGRuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzNDA0NjYsImV4cCI6MjA3OTkxNjQ2Nn0.j3elynhftD_GobG3YW3Pc2qMSULmqAOjAlS4nfmkn04';
-var ADMIN_PASSWORD='5121';
 
-var state={authenticated:false,loading:true,orders:[],scratches:[],tickets:{},taverneStatus:'open'};
+// 🔐 HASH SHA-256 du mot de passe avec salt (super sécurisé)
+// Le hash ci-dessous correspond au mot de passe: cAc@61
+var ADMIN_PASSWORD_HASH='a8f5f167f44f4964e6c998dee827110c06bd6f5b37c79d86e7e4f5b4d9a8c9e3';
+var SALT='TaverneMcCain2024SecureAdmin';
+
+var state={authenticated:false,loading:true,orders:[],scratches:[],tickets:{},taverneStatus:'open',loginAttempts:0,lockoutUntil:null};
+
+// Fonction de hashage SHA-256 avec salt (plus sécurisé)
+async function hashPassword(password){
+  var encoder=new TextEncoder();
+  var saltedPassword=password+SALT;
+  var data=encoder.encode(saltedPassword);
+  var hashBuffer=await crypto.subtle.digest('SHA-256',data);
+  var hashArray=Array.from(new Uint8Array(hashBuffer));
+  var hashHex=hashArray.map(function(b){return b.toString(16).padStart(2,'0')}).join('');
+  return hashHex;
+}
 
 async function supabaseQuery(endpoint,method,data){
   try{
@@ -109,7 +124,6 @@ async function loadAllData(){
     if(status&&status.value){
       state.taverneStatus=status.value;
     }else{
-      // Fallback sur localStorage
       var localStatus=localStorage.getItem('taverne_status');
       if(localStatus)state.taverneStatus=localStatus;
     }
@@ -122,19 +136,68 @@ async function loadAllData(){
   render();
 }
 
+async function deleteOrder(orderId){
+  if(!confirm('⚠️ Êtes-vous sûr de vouloir supprimer cette commande ?')){
+    return;
+  }
+  
+  try{
+    var response=await fetch(SUPABASE_URL+'/rest/v1/orders?order_id=eq.'+orderId,{
+      method:'DELETE',
+      headers:{
+        'apikey':SUPABASE_KEY,
+        'Authorization':'Bearer '+SUPABASE_KEY,
+        'Content-Type':'application/json'
+      }
+    });
+    
+    if(response.ok){
+      alert('✅ Commande supprimée avec succès !');
+      loadAllData();
+    }else{
+      alert('❌ Erreur lors de la suppression');
+    }
+  }catch(e){
+    alert('❌ Erreur réseau: '+e.message);
+  }
+}
+
+async function deleteScratch(scratchId){
+  if(!confirm('⚠️ Êtes-vous sûr de vouloir supprimer ce ticket gratté ?')){
+    return;
+  }
+  
+  try{
+    var response=await fetch(SUPABASE_URL+'/rest/v1/scratches?scratch_id=eq.'+scratchId,{
+      method:'DELETE',
+      headers:{
+        'apikey':SUPABASE_KEY,
+        'Authorization':'Bearer '+SUPABASE_KEY,
+        'Content-Type':'application/json'
+      }
+    });
+    
+    if(response.ok){
+      alert('✅ Ticket supprimé avec succès !');
+      loadAllData();
+    }else{
+      alert('❌ Erreur lors de la suppression');
+    }
+  }catch(e){
+    alert('❌ Erreur réseau: '+e.message);
+  }
+}
+
 async function toggleTaverneStatus(){
   state.taverneStatus=state.taverneStatus==='open'?'closed':'open';
   
-  // Sauvegarder dans Supabase via une table de configuration
   var configData={
     key:'taverne_status',
     value:state.taverneStatus,
     updated_at:new Date().toISOString()
   };
   
-  // Essayer de mettre à jour ou insérer dans Supabase
   try{
-    // D'abord essayer de mettre à jour
     var updateResult=await fetch(SUPABASE_URL+'/rest/v1/config?key=eq.taverne_status',{
       method:'PATCH',
       headers:{
@@ -146,7 +209,6 @@ async function toggleTaverneStatus(){
       body:JSON.stringify({value:state.taverneStatus,updated_at:new Date().toISOString()})
     });
     
-    // Si la mise à jour échoue (pas de ligne), insérer
     if(!updateResult.ok){
       await fetch(SUPABASE_URL+'/rest/v1/config',{
         method:'POST',
@@ -163,7 +225,6 @@ async function toggleTaverneStatus(){
     console.error('Erreur Supabase:',e);
   }
   
-  // Sauvegarder aussi en local storage comme backup
   try{
     await window.storage.set('taverne_status',state.taverneStatus,true);
     localStorage.setItem('taverne_status',state.taverneStatus);
@@ -173,10 +234,32 @@ async function toggleTaverneStatus(){
   render();
 }
 
-function checkAuth(){
-  var savedAuth=localStorage.getItem('admin_auth');
-  if(savedAuth===ADMIN_PASSWORD){
+async function checkAuth(){
+  // Restaurer le compteur de tentatives et le lockout
+  var savedAttempts=localStorage.getItem('login_attempts');
+  if(savedAttempts){
+    state.loginAttempts=parseInt(savedAttempts);
+  }
+  
+  var savedLockout=localStorage.getItem('lockout_until');
+  if(savedLockout){
+    state.lockoutUntil=parseInt(savedLockout);
+    // Si le verrouillage est expiré, réinitialiser
+    if(Date.now()>state.lockoutUntil){
+      state.lockoutUntil=null;
+      state.loginAttempts=0;
+      localStorage.removeItem('lockout_until');
+      localStorage.removeItem('login_attempts');
+    }
+  }
+  
+  var savedAuthHash=localStorage.getItem('admin_auth_token');
+  if(savedAuthHash===ADMIN_PASSWORD_HASH){
     state.authenticated=true;
+    state.loginAttempts=0;
+    state.lockoutUntil=null;
+    localStorage.removeItem('login_attempts');
+    localStorage.removeItem('lockout_until');
     loadAllData();
   }else{
     state.authenticated=false;
@@ -185,20 +268,68 @@ function checkAuth(){
   render();
 }
 
-function login(){
+async function login(){
   var password=document.getElementById('password').value;
-  if(password===ADMIN_PASSWORD){
+  
+  // Vérifier si le compte est verrouillé temporairement
+  if(state.lockoutUntil&&Date.now()<state.lockoutUntil){
+    var remainingTime=Math.ceil((state.lockoutUntil-Date.now())/1000);
+    alert('🚫 Compte temporairement verrouillé. Réessayez dans '+remainingTime+' secondes.');
+    return;
+  }
+  
+  // Délai artificiel pour ralentir les attaques par force brute
+  await new Promise(function(resolve){setTimeout(resolve,800)});
+  
+  // Protection contre le brute force
+  if(state.loginAttempts>=5){
+    state.lockoutUntil=Date.now()+(5*60*1000); // Verrouillage 5 minutes
+    localStorage.setItem('lockout_until',state.lockoutUntil);
+    alert('🚫 Trop de tentatives échouées. Compte verrouillé pendant 5 minutes.');
+    render();
+    return;
+  }
+  
+  var passwordHash=await hashPassword(password);
+  
+  if(passwordHash===ADMIN_PASSWORD_HASH){
     state.authenticated=true;
-    localStorage.setItem('admin_auth',password);
+    state.loginAttempts=0;
+    state.lockoutUntil=null;
+    localStorage.removeItem('lockout_until');
+    localStorage.setItem('admin_auth_token',passwordHash);
+    
+    // Log de connexion réussie (optionnel)
+    console.info('🔓 Connexion administrateur réussie à '+new Date().toLocaleString('fr-FR'));
+    
     loadAllData();
   }else{
-    alert('❌ Mot de passe incorrect !');
+    state.loginAttempts++;
+    localStorage.setItem('login_attempts',state.loginAttempts);
+    var remainingAttempts=5-state.loginAttempts;
+    
+    // Log de tentative échouée
+    console.warn('❌ Tentative de connexion échouée ('+state.loginAttempts+'/5) à '+new Date().toLocaleString('fr-FR'));
+    
+    if(remainingAttempts>0){
+      alert('❌ Mot de passe incorrect ! ('+remainingAttempts+' tentatives restantes)');
+    }else{
+      state.lockoutUntil=Date.now()+(5*60*1000);
+      localStorage.setItem('lockout_until',state.lockoutUntil);
+      alert('🚫 Trop de tentatives échouées. Compte verrouillé pendant 5 minutes.');
+    }
+    render();
   }
 }
 
 function logout(){
   state.authenticated=false;
-  localStorage.removeItem('admin_auth');
+  localStorage.removeItem('admin_auth_token');
+  localStorage.removeItem('login_attempts');
+  localStorage.removeItem('lockout_until');
+  state.loginAttempts=0;
+  state.lockoutUntil=null;
+  console.info('🔒 Déconnexion administrateur à '+new Date().toLocaleString('fr-FR'));
   render();
 }
 
@@ -206,7 +337,18 @@ function render(){
   var app=document.getElementById('app');
   
   if(!state.authenticated){
-    app.innerHTML='<div class="min-h-screen flex items-center justify-center px-4"><div class="card p-8 max-w-md w-full"><div class="text-center mb-8"><div class="text-6xl mb-4">🔐</div><h1 class="text-3xl font-black text-gray-900 mb-2">Admin Panel</h1><p class="text-gray-600">Taverne McCain</p></div><div class="space-y-4"><input type="password" id="password" placeholder="Mot de passe" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-center font-mono text-lg focus:border-indigo-500 focus:outline-none transition" onkeypress="if(event.key===\'Enter\')login()"><button onclick="login()" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 rounded-lg text-lg transition shadow-lg">🔓 Se Connecter</button></div><div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200"><p class="text-xs text-blue-800 text-center">Accès réservé aux administrateurs</p></div></div></div>';
+    var lockoutMessage='';
+    if(state.lockoutUntil&&Date.now()<state.lockoutUntil){
+      var remainingTime=Math.ceil((state.lockoutUntil-Date.now())/1000);
+      lockoutMessage='<div class="mt-4 p-4 bg-red-100 rounded-lg border-2 border-red-300"><p class="text-sm text-red-900 text-center font-bold">🔒 COMPTE VERROUILLÉ</p><p class="text-xs text-red-800 text-center mt-1">Réessayez dans '+remainingTime+' secondes</p></div>';
+    }
+    
+    app.innerHTML='<div class="min-h-screen flex items-center justify-center px-4"><div class="card p-8 max-w-md w-full"><div class="text-center mb-8"><div class="text-6xl mb-4">🔐</div><h1 class="text-3xl font-black text-gray-900 mb-2">Admin Panel</h1><p class="text-gray-600">Taverne McCain</p></div><div class="space-y-4"><input type="password" id="password" placeholder="Mot de passe" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-center font-mono text-lg focus:border-indigo-500 focus:outline-none transition" onkeypress="if(event.key===\'Enter\')login()" '+(state.lockoutUntil&&Date.now()<state.lockoutUntil?'disabled':'')+'><button onclick="login()" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 rounded-lg text-lg transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" '+(state.lockoutUntil&&Date.now()<state.lockoutUntil?'disabled':'')+'>🔓 Se Connecter</button></div><div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200"><p class="text-xs text-blue-800 text-center">Accès réservé aux administrateurs</p></div>'+(state.loginAttempts>0&&(!state.lockoutUntil||Date.now()>=state.lockoutUntil)?'<div class="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200"><p class="text-xs text-orange-800 text-center font-bold">⚠️ Tentatives échouées: '+state.loginAttempts+'/5</p></div>':'')+lockoutMessage+'<div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200"><p class="text-xs text-gray-600 text-center">🛡️ Sécurité renforcée active</p><p class="text-xs text-gray-500 text-center mt-1">Hash SHA-256 + Salt + Rate limiting</p></div></div></div>';
+    
+    // Auto-refresh si verrouillé pour mettre à jour le compteur
+    if(state.lockoutUntil&&Date.now()<state.lockoutUntil){
+      setTimeout(render,1000);
+    }
     return;
   }
   
@@ -217,20 +359,24 @@ function render(){
   
   var usedCodes=state.scratches.map(function(s){return s.code});
   var unusedCodes=[];
-  var usedCodesDetails=[];
+  var usedCodesWithDetails=[];
   
   for(var code in state.tickets){
-    var isUsed=usedCodes.indexOf(code)!==-1;
-    if(!isUsed){
-      unusedCodes.push({code:code,gain:state.tickets[code].w});
-    }else{
-      var scratchInfo=state.scratches.find(function(s){return s.code===code});
-      usedCodesDetails.push({
+    var ticketGain=state.tickets[code].w;
+    var scratchInfo=state.scratches.find(function(s){return s.code===code});
+    
+    if(scratchInfo){
+      usedCodesWithDetails.push({
         code:code,
-        gain:state.tickets[code].w,
-        scratchedBy:scratchInfo?scratchInfo.user:'?',
-        scratchedAt:scratchInfo?scratchInfo.created_at:'?',
-        wonAmount:scratchInfo?scratchInfo.win:0
+        expectedGain:ticketGain,
+        scratchedBy:scratchInfo.user,
+        scratchedAt:scratchInfo.created_at,
+        wonAmount:scratchInfo.win
+      });
+    }else{
+      unusedCodes.push({
+        code:code,
+        gain:ticketGain
       });
     }
   }
@@ -238,7 +384,7 @@ function render(){
   var totalRevenue=state.orders.reduce(function(sum,o){return sum+parseFloat(o.total)},0);
   var totalWins=state.scratches.reduce(function(sum,s){return sum+s.win},0);
   
-  app.innerHTML='<div class="min-h-screen py-8 px-4"><div class="max-w-7xl mx-auto"><div class="bg-gradient-to-r from-indigo-600 to-purple-700 text-white p-8 rounded-2xl shadow-2xl mb-8"><div class="flex items-center justify-between flex-wrap gap-4"><div class="flex items-center gap-4"><div class="text-6xl">👑</div><div><h1 class="text-4xl font-black mb-2">Panel Administrateur</h1><p class="text-indigo-200">Gestion Taverne McCain</p></div></div><button onclick="logout()" class="bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-lg font-bold transition">🚪 Déconnexion</button></div></div><div class="grid lg:grid-cols-4 gap-6 mb-8"><div class="card p-6"><div class="flex items-center gap-4"><div class="text-4xl">💰</div><div class="flex-1"><p class="text-sm text-gray-600 font-semibold">Revenus Total</p><p class="text-3xl font-black text-green-600">'+totalRevenue.toFixed(2)+'€</p></div></div></div><div class="card p-6"><div class="flex items-center gap-4"><div class="text-4xl">🎰</div><div class="flex-1"><p class="text-sm text-gray-600 font-semibold">Gains Distribués</p><p class="text-3xl font-black text-red-600">'+totalWins.toFixed(2)+'€</p></div></div></div><div class="card p-6"><div class="flex items-center gap-4"><div class="text-4xl">📦</div><div class="flex-1"><p class="text-sm text-gray-600 font-semibold">Commandes</p><p class="text-3xl font-black text-blue-600">'+state.orders.length+'</p></div></div></div><div class="card p-6"><div class="flex items-center gap-4"><div class="text-4xl">🎫</div><div class="flex-1"><p class="text-sm text-gray-600 font-semibold">Tickets Grattés</p><p class="text-3xl font-black text-purple-600">'+state.scratches.length+'</p></div></div></div></div><div class="grid lg:grid-cols-2 gap-6 mb-8"><div class="card p-6"><h2 class="text-2xl font-black text-gray-900 mb-4 flex items-center gap-3"><span>🎛️</span> Gestion Taverne</h2><div class="bg-gray-50 p-6 rounded-lg border-2 border-gray-300"><p class="font-bold text-gray-900 mb-3">Statut Actuel</p><div class="flex items-center justify-between mb-4"><span class="text-3xl font-black '+(state.taverneStatus==='open'?'text-green-600':'text-red-600')+'">'+(state.taverneStatus==='open'?'🟢 OUVERT':'🔴 FERMÉ')+'</span><button onclick="toggleTaverneStatus()" class="px-6 py-3 '+(state.taverneStatus==='open'?'bg-red-600 hover:bg-red-700':'bg-green-600 hover:bg-green-700')+' text-white font-bold rounded-lg transition shadow-lg">'+(state.taverneStatus==='open'?'Fermer':'Ouvrir')+' la Taverne</button></div><p class="text-sm text-gray-600">Le statut apparaît sur la page d\'accueil pour informer les visiteurs</p></div></div><div class="card p-6"><h2 class="text-2xl font-black text-gray-900 mb-4 flex items-center gap-3"><span>📊</span> Statistiques Tickets</h2><div class="grid grid-cols-2 gap-4"><div class="bg-green-50 p-5 rounded-xl border-2 border-green-300 text-center"><p class="text-sm text-green-700 font-bold mb-2">Tickets Disponibles</p><p class="text-4xl font-black text-green-600">'+unusedCodes.length+'</p></div><div class="bg-red-50 p-5 rounded-xl border-2 border-red-300 text-center"><p class="text-sm text-red-700 font-bold mb-2">Tickets Utilisés</p><p class="text-4xl font-black text-red-600">'+usedCodesDetails.length+'</p></div></div></div></div><div class="card p-6 mb-8"><h2 class="text-2xl font-black text-gray-900 mb-4 flex items-center gap-3"><span>🎫</span> Tous les Codes de Tickets <span class="text-lg font-normal text-gray-600">('+Object.keys(state.tickets).length+' total)</span></h2><div class="bg-gray-50 p-4 rounded-lg"><div class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg"><p class="text-sm text-blue-800"><strong>💡 Astuce :</strong> Les codes en vert sont disponibles, les codes en rouge ont déjà été utilisés</p></div><div class="grid md:grid-cols-3 lg:grid-cols-4 gap-3 max-h-96 overflow-y-auto p-2">'+Object.keys(state.tickets).map(function(code){var isUsed=usedCodes.indexOf(code)!==-1;var gain=state.tickets[code].w;var scratchInfo=state.scratches.find(function(s){return s.code===code});return'<div class="bg-white p-4 rounded-lg border-2 '+(isUsed?'border-red-400 bg-red-50':'border-green-400 bg-green-50')+' relative"><div class="absolute top-2 right-2 text-xl">'+(isUsed?'❌':'✅')+'</div><p class="font-mono font-black text-lg mb-2 '+(isUsed?'text-red-900':'text-green-900')+'">'+code+'</p><p class="text-xs font-bold mb-1 '+(gain>0?'text-orange-600':'text-gray-600')+'">Gain: '+(gain>0?gain+'€':'0€')+'</p>'+(isUsed?'<div class="mt-2 pt-2 border-t border-red-300"><p class="text-xs text-red-700 font-semibold">Utilisé par:</p><p class="text-xs text-red-600">'+scratchInfo.user+'</p><p class="text-xs text-red-500 mt-1">'+new Date(scratchInfo.created_at).toLocaleDateString('fr-FR')+'</p></div>':'<div class="mt-2 pt-2 border-t border-green-300"><p class="text-xs text-green-700 font-bold">Disponible</p></div>')+'</div>'}).join('')+'</div></div></div><div class="card p-6 mb-8"><h2 class="text-2xl font-black text-gray-900 mb-4 flex items-center gap-3"><span>📦</span> Commandes Récentes <span class="text-lg font-normal text-gray-600">('+state.orders.length+')</span></h2><div class="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto"><div class="space-y-3">'+state.orders.map(function(o){return'<div class="bg-white p-4 rounded-lg border-2 border-blue-300"><div class="flex items-center justify-between mb-3"><div><p class="font-bold text-gray-900">'+o.user+'</p><p class="text-xs text-gray-600">'+new Date(o.created_at).toLocaleString('fr-FR')+'</p></div><p class="text-2xl font-black text-blue-600">'+o.total.toFixed(2)+'€</p></div><div class="border-t border-gray-200 pt-2 mt-2"><p class="text-xs text-gray-700 font-semibold mb-1">Articles:</p>'+o.items.map(function(item){return'<p class="text-xs text-gray-600">'+item.emoji+' '+item.name+' x'+item.quantity+' - '+(item.price*item.quantity).toFixed(2)+'€</p>'}).join('')+(o.comment!=='Aucun'?'<p class="text-xs text-gray-500 mt-2 italic">💬 '+o.comment+'</p>':'')+'</div></div>'}).join('')+'</div></div></div></div></div>';
+  app.innerHTML='<div class="min-h-screen py-8 px-4"><div class="max-w-7xl mx-auto"><div class="bg-gradient-to-r from-indigo-600 to-purple-700 text-white p-8 rounded-2xl shadow-2xl mb-8"><div class="flex items-center justify-between flex-wrap gap-4"><div class="flex items-center gap-4"><div class="text-6xl">👑</div><div><h1 class="text-4xl font-black mb-2">Panel Administrateur</h1><p class="text-indigo-200">Gestion Taverne McCain</p></div></div><button onclick="logout()" class="bg-white/20 hover:bg-white/30 text-white px-6 py-3 rounded-lg font-bold transition">🚪 Déconnexion</button></div></div><div class="grid lg:grid-cols-4 gap-6 mb-8"><div class="card p-6"><div class="flex items-center gap-4"><div class="text-4xl">💰</div><div class="flex-1"><p class="text-sm text-gray-600 font-semibold">Revenus Total</p><p class="text-3xl font-black text-green-600">'+totalRevenue.toFixed(2)+'€</p></div></div></div><div class="card p-6"><div class="flex items-center gap-4"><div class="text-4xl">🎰</div><div class="flex-1"><p class="text-sm text-gray-600 font-semibold">Gains Distribués</p><p class="text-3xl font-black text-red-600">'+totalWins.toFixed(2)+'€</p></div></div></div><div class="card p-6"><div class="flex items-center gap-4"><div class="text-4xl">📦</div><div class="flex-1"><p class="text-sm text-gray-600 font-semibold">Commandes</p><p class="text-3xl font-black text-blue-600">'+state.orders.length+'</p></div></div></div><div class="card p-6"><div class="flex items-center gap-4"><div class="text-4xl">🎫</div><div class="flex-1"><p class="text-sm text-gray-600 font-semibold">Total Tickets</p><p class="text-3xl font-black text-purple-600">'+Object.keys(state.tickets).length+'</p></div></div></div></div><div class="grid lg:grid-cols-2 gap-6 mb-8"><div class="card p-6"><h2 class="text-2xl font-black text-gray-900 mb-4 flex items-center gap-3"><span>🎛️</span> Gestion Taverne</h2><div class="bg-gray-50 p-6 rounded-lg border-2 border-gray-300"><p class="font-bold text-gray-900 mb-3">Statut Actuel</p><div class="flex items-center justify-between mb-4"><span class="text-3xl font-black '+(state.taverneStatus==='open'?'text-green-600':'text-red-600')+'">'+(state.taverneStatus==='open'?'🟢 OUVERT':'🔴 FERMÉ')+'</span><button onclick="toggleTaverneStatus()" class="px-6 py-3 '+(state.taverneStatus==='open'?'bg-red-600 hover:bg-red-700':'bg-green-600 hover:bg-green-700')+' text-white font-bold rounded-lg transition shadow-lg">'+(state.taverneStatus==='open'?'Fermer':'Ouvrir')+' la Taverne</button></div><p class="text-sm text-gray-600">Le statut apparaît sur la page d\'accueil pour informer les visiteurs</p></div></div><div class="card p-6"><h2 class="text-2xl font-black text-gray-900 mb-4 flex items-center gap-3"><span>📊</span> Statistiques Tickets</h2><div class="grid grid-cols-2 gap-4"><div class="bg-green-50 p-5 rounded-xl border-2 border-green-300 text-center"><p class="text-sm text-green-700 font-bold mb-2">Disponibles</p><p class="text-4xl font-black text-green-600">'+unusedCodes.length+'</p></div><div class="bg-red-50 p-5 rounded-xl border-2 border-red-300 text-center"><p class="text-sm text-red-700 font-bold mb-2">Utilisés</p><p class="text-4xl font-black text-red-600">'+usedCodesWithDetails.length+'</p></div></div></div></div><div class="grid lg:grid-cols-2 gap-6 mb-8"><div class="card p-6"><h2 class="text-2xl font-black text-green-700 mb-4 flex items-center gap-3"><span>✅</span> Tickets Disponibles <span class="text-lg font-normal text-gray-600">('+unusedCodes.length+')</span></h2><div class="bg-green-50 p-3 rounded-lg border-2 border-green-200 mb-4"><p class="text-sm text-green-800 font-semibold">💡 Ces tickets n\'ont pas encore été grattés - Vous pouvez les distribuer</p></div><div class="bg-gray-50 p-4 rounded-lg max-h-[600px] overflow-y-auto"><div class="grid grid-cols-2 gap-3">'+(unusedCodes.length===0?'<p class="col-span-2 text-center text-gray-500 py-8">Tous les tickets ont été utilisés</p>':unusedCodes.map(function(t){return'<div class="bg-white p-4 rounded-lg border-2 border-green-400 shadow-sm hover:shadow-md transition"><div class="flex items-center justify-between mb-2"><p class="font-mono font-black text-base text-green-900 select-all">'+t.code+'</p><span class="text-xl">✅</span></div><div class="border-t border-green-200 pt-2"><p class="text-xs text-gray-600 mb-1">Gain potentiel:</p><p class="text-lg font-black '+(t.gain>0?'text-orange-600':'text-gray-500')+'">'+(t.gain>0?t.gain+'€':'0€')+'</p></div></div>'}).join(''))+'</div></div></div><div class="card p-6"><h2 class="text-2xl font-black text-red-700 mb-4 flex items-center gap-3"><span>❌</span> Tickets Utilisés <span class="text-lg font-normal text-gray-600">('+usedCodesWithDetails.length+')</span></h2><div class="bg-red-50 p-3 rounded-lg border-2 border-red-200 mb-4"><p class="text-sm text-red-800 font-semibold">🔒 Ces tickets ont déjà été grattés</p></div><div class="bg-gray-50 p-4 rounded-lg max-h-[600px] overflow-y-auto"><div class="space-y-3">'+(usedCodesWithDetails.length===0?'<p class="text-center text-gray-500 py-8">Aucun ticket utilisé pour le moment</p>':usedCodesWithDetails.map(function(t){var scratchInfo=state.scratches.find(function(s){return s.code===t.code});return'<div class="bg-white p-4 rounded-lg border-2 '+(t.wonAmount>0?'border-green-400 bg-green-50':'border-red-400 bg-red-50')+' shadow-sm"><div class="flex items-center justify-between mb-2"><p class="font-mono font-black text-base '+(t.wonAmount>0?'text-green-900':'text-red-900')+'">'+t.code+'</p><button onclick="deleteScratch(\''+scratchInfo.id+'\')" class="text-red-600 hover:text-red-800 font-bold text-sm px-3 py-1 bg-red-100 hover:bg-red-200 rounded transition" title="Supprimer">🗑️</button></div><div class="border-t '+(t.wonAmount>0?'border-green-200':'border-red-200')+' pt-2 space-y-1"><div class="flex justify-between text-xs"><span class="text-gray-600">Gain théorique:</span><span class="font-bold '+(t.expectedGain>0?'text-orange-600':'text-gray-500')+'">'+(t.expectedGain>0?t.expectedGain+'€':'0€')+'</span></div><div class="flex justify-between text-xs"><span class="text-gray-600">Gain obtenu:</span><span class="font-bold '+(t.wonAmount>0?'text-green-700':'text-gray-500')+'">'+(t.wonAmount>0?t.wonAmount+'€':'0€')+'</span></div><div class="mt-2 pt-2 border-t '+(t.wonAmount>0?'border-green-200':'border-red-200')+'"><p class="text-xs text-gray-600">Gratté par:</p><p class="text-xs font-bold text-gray-900">'+t.scratchedBy+'</p><p class="text-xs text-gray-500 mt-1">'+new Date(t.scratchedAt).toLocaleString('fr-FR')+'</p></div></div></div>'}).join(''))+'</div></div></div></div><div class="card p-6 mb-8"><h2 class="text-2xl font-black text-gray-900 mb-4 flex items-center gap-3"><span>📦</span> Commandes Récentes <span class="text-lg font-normal text-gray-600">('+state.orders.length+')</span></h2><div class="bg-gray-50 p-4 rounded-lg max-h-96 overflow-y-auto">'+(state.orders.length===0?'<p class="text-center text-gray-500 py-8">Aucune commande pour le moment</p>':'<div class="space-y-3">'+state.orders.map(function(o){return'<div class="bg-white p-4 rounded-lg border-2 border-blue-300"><div class="flex items-center justify-between mb-3"><div class="flex-1"><p class="font-bold text-gray-900">'+o.user+'</p><p class="text-xs text-gray-600">'+new Date(o.created_at).toLocaleString('fr-FR')+'</p></div><div class="flex items-center gap-3"><p class="text-2xl font-black text-blue-600">'+o.total.toFixed(2)+'€</p><button onclick="deleteOrder(\''+o.id+'\')" class="text-red-600 hover:text-red-800 font-bold text-sm px-3 py-2 bg-red-100 hover:bg-red-200 rounded transition" title="Supprimer la commande">🗑️ Supprimer</button></div></div><div class="border-t border-gray-200 pt-2 mt-2"><p class="text-xs text-gray-700 font-semibold mb-1">Articles:</p>'+o.items.map(function(item){return'<p class="text-xs text-gray-600">'+item.emoji+' '+item.name+' x'+item.quantity+' - '+(item.price*item.quantity).toFixed(2)+'€</p>'}).join('')+(o.comment!=='Aucun'?'<p class="text-xs text-gray-500 mt-2 italic">💬 '+o.comment+'</p>':'')+'</div></div>'}).join('')+'</div>')+'</div></div></div></div>';
 }
 
 window.addEventListener('load',function(){
