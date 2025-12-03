@@ -1,1 +1,59 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculateur Hash</title>
+<script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-900 min-h-screen flex items-center justify-center p-4">
+<div class="bg-white rounded-xl p-8 max-w-md w-full">
+<h1 class="text-2xl font-bold mb-6 text-center">🔐 Calculateur de Hash</h1>
+<div class="space-y-4">
+<div>
+<label class="block text-sm font-semibold mb-2">Mot de passe:</label>
+<input type="text" id="password" value="Aurel0u@" class="w-full px-4 py-2 border-2 rounded-lg">
+</div>
+<div>
+<label class="block text-sm font-semibold mb-2">Salt:</label>
+<input type="text" id="salt" value="TaverneMcCain2024SecureAdmin" class="w-full px-4 py-2 border-2 rounded-lg">
+</div>
+<button onclick="calculateHash()" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg">
+Calculer le Hash
+</button>
+<div id="result" class="hidden">
+<label class="block text-sm font-semibold mb-2">Hash SHA-256:</label>
+<div class="bg-gray-100 p-3 rounded-lg break-all font-mono text-sm" id="hashOutput"></div>
+<button onclick="copyHash()" class="mt-2 w-full bg-green-600 hover:bg-green-700 text-white font-bold py-2 rounded-lg">
+📋 Copier le Hash
+</button>
+</div>
+</div>
+</div>
 
+<script>
+async function calculateHash(){
+  var password = document.getElementById('password').value;
+  var salt = document.getElementById('salt').value;
+  
+  var encoder = new TextEncoder();
+  var saltedPassword = password + salt;
+  var data = encoder.encode(saltedPassword);
+  var hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  var hashArray = Array.from(new Uint8Array(hashBuffer));
+  var hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  
+  document.getElementById('hashOutput').textContent = hashHex;
+  document.getElementById('result').classList.remove('hidden');
+}
+
+function copyHash(){
+  var hash = document.getElementById('hashOutput').textContent;
+  navigator.clipboard.writeText(hash);
+  alert('✅ Hash copié dans le presse-papier !');
+}
+
+calculateHash();
+</script>
+</body>
+</html>
