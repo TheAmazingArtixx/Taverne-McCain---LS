@@ -240,29 +240,11 @@ async function toggleTaverneStatus(){
 }
 
 async function checkAuth(){
-  var savedAttempts=localStorage.getItem('login_attempts');
-  if(savedAttempts){
-    state.loginAttempts=parseInt(savedAttempts);
-  }
-  
-  var savedLockout=localStorage.getItem('lockout_until');
-  if(savedLockout){
-    state.lockoutUntil=parseInt(savedLockout);
-    if(Date.now()>state.lockoutUntil){
-      state.lockoutUntil=null;
-      state.loginAttempts=0;
-      localStorage.removeItem('lockout_until');
-      localStorage.removeItem('login_attempts');
-    }
-  }
-  
   var savedAuthHash=localStorage.getItem('admin_auth_token');
-  if(savedAuthHash===ADMIN_PASSWORD_HASH){
+  if(savedAuthHash&&savedAuthHash===ADMIN_PASSWORD_HASH){
     state.authenticated=true;
     state.loginAttempts=0;
     state.lockoutUntil=null;
-    localStorage.removeItem('login_attempts');
-    localStorage.removeItem('lockout_until');
     loadAllData();
   }else{
     state.authenticated=false;
@@ -280,7 +262,7 @@ async function login(){
     return;
   }
   
-  await new Promise(function(resolve){setTimeout(resolve,800)});
+  await new Promise(function(resolve){setTimeout(resolve,500)});
   
   if(state.loginAttempts>=5){
     state.lockoutUntil=Date.now()+(5*60*1000);
@@ -297,17 +279,16 @@ async function login(){
     state.loginAttempts=0;
     state.lockoutUntil=null;
     localStorage.removeItem('lockout_until');
+    localStorage.removeItem('login_attempts');
     localStorage.setItem('admin_auth_token',passwordHash);
-    console.info('🔓 Connexion administrateur réussie à '+new Date().toLocaleString('fr-FR'));
+    console.info('🔓 Connexion réussie');
     loadAllData();
   }else{
     state.loginAttempts++;
     localStorage.setItem('login_attempts',state.loginAttempts);
-    var remainingAttempts=5-state.loginAttempts;
-    console.warn('❌ Tentative de connexion échouée ('+state.loginAttempts+'/5) à '+new Date().toLocaleString('fr-FR'));
     
-    if(remainingAttempts>0){
-      alert('❌ Mot de passe incorrect ! ('+remainingAttempts+' tentatives restantes)');
+    if(state.loginAttempts<5){
+      alert('❌ Mot de passe incorrect !');
     }else{
       state.lockoutUntil=Date.now()+(5*60*1000);
       localStorage.setItem('lockout_until',state.lockoutUntil);
@@ -324,7 +305,7 @@ function logout(){
   localStorage.removeItem('lockout_until');
   state.loginAttempts=0;
   state.lockoutUntil=null;
-  console.info('🔒 Déconnexion administrateur à '+new Date().toLocaleString('fr-FR'));
+  console.info('🔒 Déconnexion');
   render();
 }
 
@@ -338,7 +319,7 @@ function render(){
       lockoutMessage='<div class="mt-4 p-4 bg-red-100 rounded-lg border-2 border-red-300"><p class="text-sm text-red-900 text-center font-bold">🔒 COMPTE VERROUILLÉ</p><p class="text-xs text-red-800 text-center mt-1">Réessayez dans '+remainingTime+' secondes</p></div>';
     }
     
-    app.innerHTML='<div class="min-h-screen flex items-center justify-center px-4"><div class="card p-8 max-w-md w-full"><div class="text-center mb-8"><div class="text-6xl mb-4">🔐</div><h1 class="text-3xl font-black text-gray-900 mb-2">Admin Panel</h1><p class="text-gray-600">Taverne McCain</p></div><div class="space-y-4"><input type="password" id="password" placeholder="Mot de passe" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-center font-mono text-lg focus:border-indigo-500 focus:outline-none transition" onkeypress="if(event.key===\'Enter\')login()" '+(state.lockoutUntil&&Date.now()<state.lockoutUntil?'disabled':'')+'><button onclick="login()" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 rounded-lg text-lg transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" '+(state.lockoutUntil&&Date.now()<state.lockoutUntil?'disabled':'')+'>🔓 Se Connecter</button></div><div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200"><p class="text-xs text-blue-800 text-center">Accès réservé aux administrateurs</p></div>'+(state.loginAttempts>0&&(!state.lockoutUntil||Date.now()>=state.lockoutUntil)?'<div class="mt-4 p-3 bg-orange-50 rounded-lg border border-orange-200"><p class="text-xs text-orange-800 text-center font-bold">⚠️ Tentatives échouées: '+state.loginAttempts+'/5</p></div>':'')+lockoutMessage+'<div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200"><p class="text-xs text-gray-600 text-center">🛡️ Sécurité renforcée active</p><p class="text-xs text-gray-500 text-center mt-1">Hash SHA-256 + Salt + Rate limiting</p></div></div></div>';
+    app.innerHTML='<div class="min-h-screen flex items-center justify-center px-4"><div class="card p-8 max-w-md w-full"><div class="text-center mb-8"><div class="text-6xl mb-4">🔐</div><h1 class="text-3xl font-black text-gray-900 mb-2">Admin Panel</h1><p class="text-gray-600">Taverne McCain</p></div><div class="space-y-4"><input type="password" id="password" placeholder="Mot de passe" class="w-full px-4 py-3 border-2 border-gray-300 rounded-lg text-center font-mono text-lg focus:border-indigo-500 focus:outline-none transition" onkeypress="if(event.key===\'Enter\')login()" '+(state.lockoutUntil&&Date.now()<state.lockoutUntil?'disabled':'')+'><button onclick="login()" class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold py-3 rounded-lg text-lg transition shadow-lg disabled:opacity-50 disabled:cursor-not-allowed" '+(state.lockoutUntil&&Date.now()<state.lockoutUntil?'disabled':'')+'>🔓 Se Connecter</button></div><div class="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200"><p class="text-xs text-blue-800 text-center">Accès réservé aux administrateurs</p></div>'+lockoutMessage+'<div class="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200"><p class="text-xs text-gray-600 text-center">🛡️ Sécurité renforcée active</p><p class="text-xs text-gray-500 text-center mt-1">Hash SHA-256 + Salt + Rate limiting</p></div></div></div>';
     
     if(state.lockoutUntil&&Date.now()<state.lockoutUntil){
       setTimeout(render,1000);
