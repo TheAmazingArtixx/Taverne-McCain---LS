@@ -461,6 +461,18 @@
                     <h3>✅ Correspondance trouvée !</h3>
                 </div>
                 <h3>Résultats:</h3>
-                <div class="result-item"><strong>Mot de passe:</strong> ${password}</div>
+                <div class="result-item"><strong>Algorithme:</strong> ${algorithm}</div>
+                <div class="result-item"><strong>Hash:</strong> ${hash}</div>
+            `;
+            resultDiv.classList.add('show');
+        }
+
+        function stopCracking() {
+            stopRequested = true;
+            document.getElementById('statusText').textContent = 'Test arrêté par l\'utilisateur';
+        }
+    </script>
+</body>
+</html>Mot de passe:</strong> ${password}</div>
                 <div class="result-item"><strong>Salt:</strong> ${salt || 'Aucun'}</div>
                 <div class="result-item"><strong>
