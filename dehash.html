@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Outil de Test de Hash avec Salt</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 25px;
+            color: #856404;
+        }
+        .section {
+            margin-bottom: 25px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        button {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+        .result {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+            display: none;
+        }
+        .result.show {
+            display: block;
+        }
+        .result h3 {
+            color: #333;
+            margin-bottom: 15px;
+        }
+        .result-item {
+            background: white;
+            padding: 12px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 15px;
+        }
+        .progress {
+            margin-top: 15px;
+        }
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Outil de Test de Hash avec Salt</h1>
+        
+        <div class="warning">
+            ⚠️ <strong>Usage Éducatif Uniquement</strong><br>
+            Cet outil est destiné à tester vos propres mots de passe ou à des fins d'apprentissage en sécurité informatique.
+        </div>
+
+        <div class="section">
+            <label for="hashInput">Hash à tester:</label>
+            <input type="text" id="hashInput" placeholder="Entrez le hash (ex: SHA-256, MD5...)">
+        </div>
+
+        <div class="section">
+            <label for="saltInput">Salt (optionnel):</label>
+            <input type="text" id="saltInput" placeholder="Entrez le salt si connu">
+        </div>
+
+        <div class="section">
+            <label for="algorithm">Algorithme de hachage:</label>
+            <select id="algorithm">
+                <option value="SHA-256">SHA-256</option>
+                <option value="SHA-1">SHA-1</option>
+                <option value="MD5">MD5</option>
+            </select>
+        </div>
+
+        <div class="section">
+            <label for="wordlist">Liste de mots (un par ligne):</label>
+            <input type="file" id="wordlistFile" accept=".txt">
+            <p style="margin-top: 10px; color: #666; font-size: 13px;">Ou utilisez la liste commune intégrée</p>
+        </div>
+
+        <div class="btn-group">
+            <button class="btn-primary" onclick="startCracking()">Démarrer le Test</button>
+            <button class="btn-secondary" onclick="stopCracking()">Arrêter</button>
+        </div>
+
+        <div class="progress" id="progressSection" style="display: none;">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill">0%</div>
+            </div>
+            <p id="statusText" style="margin-top: 10px; color: #666;"></p>
+        </div>
+
+        <div class="result" id="result"></div>
+    </div>
+
+    <script>
+        let stopRequested = false;
+        const commonPasswords = [
+            'password', '123456', '12345678', 'qwerty', 'abc123', 'monkey', '1234567', 'letmein',
+            'trustno1', 'dragon', 'baseball', 'iloveyou', 'master', 'sunshine', 'ashley', 
+            'bailey', 'passw0rd', 'shadow', '123123', '654321', 'superman', 'password1'
+        ];
+
+        async function hashString(str, algorithm) {
+            const encoder = new TextEncoder();
+            const data = encoder.encode(str);
+            let hashBuffer;
+
+            if (algorithm === 'MD5') {
+                return md5(str);
+            } else if (algorithm === 'SHA-1') {
+                hashBuffer = await crypto.subtle.digest('SHA-1', data);
+            } else {
+                hashBuffer = await crypto.subtle.digest('SHA-256', data);
+            }
+
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        function md5(str) {
+            function rotateLeft(value, shift) {
+                return (value << shift) | (value >>> (32 - shift));
+            }
+            function addUnsigned(x, y) {
+                return ((x & 0x7FFFFFFF) + (y & 0x7FFFFFFF)) ^ (x & 0x80000000) ^ (y & 0x80000000);
+            }
+            function F(x, y, z) { return (x & y) | ((~x) & z); }
+            function G(x, y, z) { return (x & z) | (y & (~z)); }
+            function H(x, y, z) { return x ^ y ^ z; }
+            function I(x, y, z) { return y ^ (x | (~z)); }
+
+            const x = [];
+            let k, AA, BB, CC, DD, a, b, c, d;
+            const S11 = 7, S12 = 12, S13 = 17, S14 = 22;
+            const S21 = 5, S22 = 9, S23 = 14, S24 = 20;
+            const S31 = 4, S32 = 11, S33 = 16, S34 = 23;
+            const S41 = 6, S42 = 10, S43 = 15, S44 = 21;
+
+            str = unescape(encodeURIComponent(str));
+            const msgLen = str.length;
+            const nBlocks = ((msgLen + 8) >>> 6) + 1;
+            const totalLen = nBlocks * 16;
+            
+            for (let i = 0; i < totalLen; i++) x[i] = 0;
+            for (let i = 0; i < msgLen; i++) x[i >>> 2] |= str.charCodeAt(i) << ((i % 4) * 8);
+            
+            x[msgLen >>> 2] |= 0x80 << ((msgLen % 4) * 8);
+            x[totalLen - 2] = msgLen * 8;
+
+            a = 0x67452301; b = 0xEFCDAB89; c = 0x98BADCFE; d = 0x10325476;
+
+            for (k = 0; k < totalLen; k += 16) {
+                AA = a; BB = b; CC = c; DD = d;
+
+                a = addUnsigned(a, addUnsigned(addUnsigned(F(b, c, d), x[k + 0]), 0xD76AA478));
+                a = rotateLeft(a, S11); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(F(a, b, c), x[k + 1]), 0xE8C7B756));
+                d = rotateLeft(d, S12); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(F(d, a, b), x[k + 2]), 0x242070DB));
+                c = rotateLeft(c, S13); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(F(c, d, a), x[k + 3]), 0xC1BDCEEE));
+                b = rotateLeft(b, S14); b = addUnsigned(b, c);
+                a = addUnsigned(a, addUnsigned(addUnsigned(F(b, c, d), x[k + 4]), 0xF57C0FAF));
+                a = rotateLeft(a, S11); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(F(a, b, c), x[k + 5]), 0x4787C62A));
+                d = rotateLeft(d, S12); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(F(d, a, b), x[k + 6]), 0xA8304613));
+                c = rotateLeft(c, S13); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(F(c, d, a), x[k + 7]), 0xFD469501));
+                b = rotateLeft(b, S14); b = addUnsigned(b, c);
+                a = addUnsigned(a, addUnsigned(addUnsigned(F(b, c, d), x[k + 8]), 0x698098D8));
+                a = rotateLeft(a, S11); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(F(a, b, c), x[k + 9]), 0x8B44F7AF));
+                d = rotateLeft(d, S12); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(F(d, a, b), x[k + 10]), 0xFFFF5BB1));
+                c = rotateLeft(c, S13); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(F(c, d, a), x[k + 11]), 0x895CD7BE));
+                b = rotateLeft(b, S14); b = addUnsigned(b, c);
+                a = addUnsigned(a, addUnsigned(addUnsigned(F(b, c, d), x[k + 12]), 0x6B901122));
+                a = rotateLeft(a, S11); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(F(a, b, c), x[k + 13]), 0xFD987193));
+                d = rotateLeft(d, S12); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(F(d, a, b), x[k + 14]), 0xA679438E));
+                c = rotateLeft(c, S13); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(F(c, d, a), x[k + 15]), 0x49B40821));
+                b = rotateLeft(b, S14); b = addUnsigned(b, c);
+
+                a = addUnsigned(a, addUnsigned(addUnsigned(G(b, c, d), x[k + 1]), 0xF61E2562));
+                a = rotateLeft(a, S21); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(G(a, b, c), x[k + 6]), 0xC040B340));
+                d = rotateLeft(d, S22); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(G(d, a, b), x[k + 11]), 0x265E5A51));
+                c = rotateLeft(c, S23); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(G(c, d, a), x[k + 0]), 0xE9B6C7AA));
+                b = rotateLeft(b, S24); b = addUnsigned(b, c);
+                a = addUnsigned(a, addUnsigned(addUnsigned(G(b, c, d), x[k + 5]), 0xD62F105D));
+                a = rotateLeft(a, S21); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(G(a, b, c), x[k + 10]), 0x02441453));
+                d = rotateLeft(d, S22); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(G(d, a, b), x[k + 15]), 0xD8A1E681));
+                c = rotateLeft(c, S23); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(G(c, d, a), x[k + 4]), 0xE7D3FBC8));
+                b = rotateLeft(b, S24); b = addUnsigned(b, c);
+                a = addUnsigned(a, addUnsigned(addUnsigned(G(b, c, d), x[k + 9]), 0x21E1CDE6));
+                a = rotateLeft(a, S21); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(G(a, b, c), x[k + 14]), 0xC33707D6));
+                d = rotateLeft(d, S22); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(G(d, a, b), x[k + 3]), 0xF4D50D87));
+                c = rotateLeft(c, S23); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(G(c, d, a), x[k + 8]), 0x455A14ED));
+                b = rotateLeft(b, S24); b = addUnsigned(b, c);
+                a = addUnsigned(a, addUnsigned(addUnsigned(G(b, c, d), x[k + 13]), 0xA9E3E905));
+                a = rotateLeft(a, S21); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(G(a, b, c), x[k + 2]), 0xFCEFA3F8));
+                d = rotateLeft(d, S22); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(G(d, a, b), x[k + 7]), 0x676F02D9));
+                c = rotateLeft(c, S23); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(G(c, d, a), x[k + 12]), 0x8D2A4C8A));
+                b = rotateLeft(b, S24); b = addUnsigned(b, c);
+
+                a = addUnsigned(a, addUnsigned(addUnsigned(H(b, c, d), x[k + 5]), 0xFFFA3942));
+                a = rotateLeft(a, S31); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(H(a, b, c), x[k + 8]), 0x8771F681));
+                d = rotateLeft(d, S32); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(H(d, a, b), x[k + 11]), 0x6D9D6122));
+                c = rotateLeft(c, S33); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(H(c, d, a), x[k + 14]), 0xFDE5380C));
+                b = rotateLeft(b, S34); b = addUnsigned(b, c);
+                a = addUnsigned(a, addUnsigned(addUnsigned(H(b, c, d), x[k + 1]), 0xA4BEEA44));
+                a = rotateLeft(a, S31); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(H(a, b, c), x[k + 4]), 0x4BDECFA9));
+                d = rotateLeft(d, S32); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(H(d, a, b), x[k + 7]), 0xF6BB4B60));
+                c = rotateLeft(c, S33); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(H(c, d, a), x[k + 10]), 0xBEBFBC70));
+                b = rotateLeft(b, S34); b = addUnsigned(b, c);
+                a = addUnsigned(a, addUnsigned(addUnsigned(H(b, c, d), x[k + 13]), 0x289B7EC6));
+                a = rotateLeft(a, S31); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(H(a, b, c), x[k + 0]), 0xEAA127FA));
+                d = rotateLeft(d, S32); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(H(d, a, b), x[k + 3]), 0xD4EF3085));
+                c = rotateLeft(c, S33); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(H(c, d, a), x[k + 6]), 0x04881D05));
+                b = rotateLeft(b, S34); b = addUnsigned(b, c);
+                a = addUnsigned(a, addUnsigned(addUnsigned(H(b, c, d), x[k + 9]), 0xD9D4D039));
+                a = rotateLeft(a, S31); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(H(a, b, c), x[k + 12]), 0xE6DB99E5));
+                d = rotateLeft(d, S32); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(H(d, a, b), x[k + 15]), 0x1FA27CF8));
+                c = rotateLeft(c, S33); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(H(c, d, a), x[k + 2]), 0xC4AC5665));
+                b = rotateLeft(b, S34); b = addUnsigned(b, c);
+
+                a = addUnsigned(a, addUnsigned(addUnsigned(I(b, c, d), x[k + 0]), 0xF4292244));
+                a = rotateLeft(a, S41); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(I(a, b, c), x[k + 7]), 0x432AFF97));
+                d = rotateLeft(d, S42); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(I(d, a, b), x[k + 14]), 0xAB9423A7));
+                c = rotateLeft(c, S43); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(I(c, d, a), x[k + 5]), 0xFC93A039));
+                b = rotateLeft(b, S44); b = addUnsigned(b, c);
+                a = addUnsigned(a, addUnsigned(addUnsigned(I(b, c, d), x[k + 12]), 0x655B59C3));
+                a = rotateLeft(a, S41); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(I(a, b, c), x[k + 3]), 0x8F0CCC92));
+                d = rotateLeft(d, S42); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(I(d, a, b), x[k + 10]), 0xFFEFF47D));
+                c = rotateLeft(c, S43); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(I(c, d, a), x[k + 1]), 0x85845DD1));
+                b = rotateLeft(b, S44); b = addUnsigned(b, c);
+                a = addUnsigned(a, addUnsigned(addUnsigned(I(b, c, d), x[k + 8]), 0x6FA87E4F));
+                a = rotateLeft(a, S41); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(I(a, b, c), x[k + 15]), 0xFE2CE6E0));
+                d = rotateLeft(d, S42); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(I(d, a, b), x[k + 6]), 0xA3014314));
+                c = rotateLeft(c, S43); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(I(c, d, a), x[k + 13]), 0x4E0811A1));
+                b = rotateLeft(b, S44); b = addUnsigned(b, c);
+                a = addUnsigned(a, addUnsigned(addUnsigned(I(b, c, d), x[k + 4]), 0xF7537E82));
+                a = rotateLeft(a, S41); a = addUnsigned(a, b);
+                d = addUnsigned(d, addUnsigned(addUnsigned(I(a, b, c), x[k + 11]), 0xBD3AF235));
+                d = rotateLeft(d, S42); d = addUnsigned(d, a);
+                c = addUnsigned(c, addUnsigned(addUnsigned(I(d, a, b), x[k + 2]), 0x2AD7D2BB));
+                c = rotateLeft(c, S43); c = addUnsigned(c, d);
+                b = addUnsigned(b, addUnsigned(addUnsigned(I(c, d, a), x[k + 9]), 0xEB86D391));
+                b = rotateLeft(b, S44); b = addUnsigned(b, c);
+
+                a = addUnsigned(a, AA);
+                b = addUnsigned(b, BB);
+                c = addUnsigned(c, CC);
+                d = addUnsigned(d, DD);
+            }
+
+            const temp = [a, b, c, d];
+            let result = '';
+            for (let i = 0; i < 4; i++) {
+                result += ((temp[i] & 0xFF)).toString(16).padStart(2, '0');
+                result += ((temp[i] >>> 8) & 0xFF).toString(16).padStart(2, '0');
+                result += ((temp[i] >>> 16) & 0xFF).toString(16).padStart(2, '0');
+                result += ((temp[i] >>> 24) & 0xFF).toString(16).padStart(2, '0');
+            }
+            return result;
+        }
+
+        async function startCracking() {
+            const hash = document.getElementById('hashInput').value.trim().toLowerCase();
+            const salt = document.getElementById('saltInput').value.trim();
+            const algorithm = document.getElementById('algorithm').value;
+            const fileInput = document.getElementById('wordlistFile');
+
+            if (!hash) {
+                alert('Veuillez entrer un hash à tester');
+                return;
+            }
+
+            stopRequested = false;
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('result').classList.remove('show');
+
+            let wordlist = [...commonPasswords];
+            
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const text = await file.text();
+                const customWords = text.split('\n').map(w => w.trim()).filter(w => w);
+                wordlist = [...customWords, ...commonPasswords];
+            }
+
+            let found = false;
+            const total = wordlist.length;
+
+            for (let i = 0; i < total && !stopRequested; i++) {
+                const password = wordlist[i];
+                const testString = salt ? salt + password : password;
+                const testHash = await hashString(testString, algorithm);
+
+                const progress = Math.round((i + 1) / total * 100);
+                document.getElementById('progressFill').style.width = progress + '%';
+                document.getElementById('progressFill').textContent = progress + '%';
+                document.getElementById('statusText').textContent = `Test: ${password} (${i + 1}/${total})`;
+
+                if (testHash === hash) {
+                    found = true;
+                    showResult(password, testHash, salt, algorithm);
+                    break;
+                }
+
+                if (i % 10 === 0) {
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+            }
+
+            if (!found && !stopRequested) {
+                document.getElementById('result').innerHTML = '<h3>❌ Aucune correspondance trouvée</h3><p>Le mot de passe ne figure pas dans la liste testée.</p>';
+                document.getElementById('result').classList.add('show');
+            }
+        }
+
+        function showResult(password, hash, salt, algorithm) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.innerHTML = `
+                <div class="success">
+                    <h3>✅ Correspondance trouvée !</h3>
+                </div>
+                <h3>Résultats:</h3>
+                <div class="result-item"><strong>Mot de passe:</strong> ${password}</div>
+                <div class="result-item"><strong>Salt:</strong> ${salt || 'Aucun'}</div>
+                <div class="result-item"><strong>
