@@ -58,6 +58,22 @@ async function supabaseQuery(endpoint,method,data){
 }
 
 async function loadTickets(){
+  // Charger les tickets depuis la table ticket_codes dans Supabase
+  try{
+    var ticketCodesResult=await supabaseQuery('ticket_codes?select=*','GET');
+    if(ticketCodesResult){
+      state.tickets={};
+      ticketCodesResult.forEach(function(ticket){
+        state.tickets[ticket.code]={w:ticket.win_amount};
+      });
+      console.log('✅ Tickets chargés depuis Supabase:',Object.keys(state.tickets).length,'tickets');
+      return;
+    }
+  }catch(e){
+    console.error('Erreur Supabase ticket_codes:',e);
+  }
+  
+  // Fallback: charger depuis GitHub
   var GITHUB_TICKETS_URL='https://raw.githubusercontent.com/TheAmazingArtixx/Taverne-McCain---LS/refs/heads/main/tickets.json';
   try{
     var response=await fetch(GITHUB_TICKETS_URL);
@@ -69,6 +85,8 @@ async function loadTickets(){
   }catch(e){
     console.error('Erreur GitHub:',e);
   }
+  
+  // Fallback: charger depuis fichier local
   try{
     var response=await fetch('./tickets.json');
     if(response.ok){
@@ -79,6 +97,7 @@ async function loadTickets(){
   }catch(e){
     console.error('Erreur fichier local:',e);
   }
+  
   state.tickets={};
   console.warn('⚠️ Aucun ticket chargé');
 }
