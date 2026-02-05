@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Nova-Life Panel Builder</title>
     <style>
         * {
@@ -16,11 +16,50 @@
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             height: 100vh;
             overflow: hidden;
+            -webkit-user-select: none;
+            user-select: none;
         }
 
         .container {
             display: flex;
             height: 100vh;
+            flex-direction: row;
+        }
+
+        /* Mobile Menu Toggle */
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 50%;
+            border: none;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            z-index: 1001;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            transition: transform 0.2s;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .menu-toggle:active {
+            transform: scale(0.9);
+        }
+
+        .sidebar-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 999;
         }
 
         /* Sidebar */
@@ -31,6 +70,8 @@
             padding: 20px;
             overflow-y: auto;
             box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            transition: transform 0.3s ease;
+            z-index: 1000;
         }
 
         .sidebar h2 {
@@ -60,15 +101,16 @@
             cursor: pointer;
             font-size: 14px;
             font-weight: 600;
-            transition: all 0.3s;
+            transition: all 0.2s;
             text-align: left;
             display: flex;
             align-items: center;
             gap: 10px;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .btn:hover {
-            transform: translateX(5px);
+        .btn:active {
+            transform: scale(0.98);
         }
 
         .btn-panel {
@@ -102,7 +144,8 @@
             flex: 1;
             position: relative;
             background: #1a202c;
-            overflow: hidden;
+            overflow: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .canvas-grid {
@@ -111,6 +154,8 @@
             left: 0;
             width: 100%;
             height: 100%;
+            min-width: 1500px;
+            min-height: 1500px;
             background-image: 
                 linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
                 linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
@@ -126,6 +171,7 @@
             min-width: 250px;
             cursor: move;
             z-index: 10;
+            touch-action: none;
         }
 
         .node.selected {
@@ -140,6 +186,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
+            cursor: move;
         }
 
         .node-header.panel {
@@ -174,11 +221,13 @@
         .node-field select,
         .node-field textarea {
             width: 100%;
-            padding: 8px;
+            padding: 10px;
             border: 2px solid #e2e8f0;
             border-radius: 6px;
-            font-size: 13px;
+            font-size: 16px;
             transition: border-color 0.3s;
+            -webkit-appearance: none;
+            appearance: none;
         }
 
         .node-field input:focus,
@@ -189,9 +238,10 @@
         }
 
         .node-field textarea {
-            min-height: 80px;
+            min-height: 100px;
             font-family: 'Courier New', monospace;
-            font-size: 12px;
+            font-size: 14px;
+            resize: vertical;
         }
 
         .delete-btn {
@@ -202,17 +252,11 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 12px;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        .delete-btn:hover {
+        .delete-btn:active {
             background: #f56565;
-        }
-
-        /* Connection lines */
-        .connection-line {
-            position: absolute;
-            pointer-events: none;
-            z-index: 5;
         }
 
         /* Modal */
@@ -224,9 +268,10 @@
             width: 100%;
             height: 100%;
             background: rgba(0,0,0,0.7);
-            z-index: 1000;
+            z-index: 2000;
             justify-content: center;
             align-items: center;
+            padding: 20px;
         }
 
         .modal.active {
@@ -235,10 +280,11 @@
 
         .modal-content {
             background: white;
-            padding: 30px;
+            padding: 25px;
             border-radius: 12px;
             max-width: 800px;
-            max-height: 80vh;
+            width: 100%;
+            max-height: 85vh;
             overflow-y: auto;
             box-shadow: 0 20px 60px rgba(0,0,0,0.5);
         }
@@ -246,51 +292,44 @@
         .modal-content h2 {
             margin-bottom: 20px;
             color: #2d3748;
+            font-size: 22px;
         }
 
         .code-output {
             background: #2d3748;
             color: #a0aec0;
-            padding: 20px;
+            padding: 15px;
             border-radius: 8px;
             font-family: 'Courier New', monospace;
-            font-size: 13px;
+            font-size: 12px;
             white-space: pre-wrap;
-            max-height: 500px;
+            max-height: 400px;
             overflow-y: auto;
             line-height: 1.6;
-        }
-
-        .code-output .keyword {
-            color: #c678dd;
-        }
-
-        .code-output .class-name {
-            color: #e5c07b;
-        }
-
-        .code-output .string {
-            color: #98c379;
-        }
-
-        .code-output .comment {
-            color: #5c6370;
-            font-style: italic;
         }
 
         .modal-buttons {
             margin-top: 20px;
             display: flex;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .modal-btn {
-            padding: 12px 24px;
+            padding: 14px 24px;
             border: none;
             border-radius: 8px;
             cursor: pointer;
             font-weight: 600;
-            transition: all 0.3s;
+            transition: all 0.2s;
+            font-size: 14px;
+            flex: 1;
+            min-width: 120px;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        .modal-btn:active {
+            transform: scale(0.98);
         }
 
         .modal-btn-primary {
@@ -307,39 +346,82 @@
             font-size: 18px;
         }
 
-        /* Tooltip */
-        .tooltip {
-            position: relative;
-            display: inline-block;
+        /* Mobile Styles */
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: flex;
+            }
+
+            .sidebar {
+                position: fixed;
+                left: 0;
+                top: 0;
+                height: 100vh;
+                transform: translateX(-100%);
+                width: 85%;
+                max-width: 320px;
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .sidebar-overlay.active {
+                display: block;
+            }
+
+            .canvas-grid {
+                min-width: 2500px;
+                min-height: 2500px;
+            }
+
+            .node {
+                min-width: 280px;
+            }
+
+            .btn {
+                padding: 15px;
+                font-size: 15px;
+            }
+
+            .btn:hover {
+                transform: none;
+            }
+
+            .modal-content {
+                padding: 20px;
+                max-height: 90vh;
+            }
+
+            .modal-content h2 {
+                font-size: 20px;
+            }
+
+            .code-output {
+                font-size: 11px;
+                max-height: 300px;
+            }
+
+            .modal-btn {
+                padding: 16px;
+            }
         }
 
-        .tooltip .tooltiptext {
-            visibility: hidden;
-            background-color: #2d3748;
-            color: #fff;
-            text-align: center;
-            border-radius: 6px;
-            padding: 5px 10px;
-            position: absolute;
-            z-index: 1;
-            bottom: 125%;
-            left: 50%;
-            margin-left: -60px;
-            opacity: 0;
-            transition: opacity 0.3s;
-            font-size: 12px;
-        }
-
-        .tooltip:hover .tooltiptext {
-            visibility: visible;
-            opacity: 1;
+        @media (min-width: 769px) {
+            .btn:hover {
+                transform: translateX(5px);
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
+        <!-- Menu Toggle for Mobile -->
+        <button class="menu-toggle" onclick="toggleMenu()">☰</button>
+        <div class="sidebar-overlay" onclick="toggleMenu()"></div>
+
         <!-- Sidebar -->
-        <div class="sidebar">
+        <div class="sidebar" id="sidebar">
             <h2>🛠️ Panel Builder</h2>
             
             <div class="section">
@@ -379,8 +461,6 @@
         <!-- Canvas -->
         <div class="canvas" id="canvas">
             <div class="canvas-grid"></div>
-            <svg id="connections" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;">
-            </svg>
         </div>
     </div>
 
@@ -390,7 +470,7 @@
             <h2>Code C# Généré</h2>
             <div class="code-output" id="codeOutput"></div>
             <div class="modal-buttons">
-                <button class="modal-btn modal-btn-primary" onclick="copyCode()">📋 Copier le code</button>
+                <button class="modal-btn modal-btn-primary" onclick="copyCode()">📋 Copier</button>
                 <button class="modal-btn modal-btn-secondary" onclick="closeModal()">Fermer</button>
             </div>
         </div>
@@ -402,6 +482,14 @@
         let selectedNode = null;
         let isDragging = false;
         let dragOffset = { x: 0, y: 0 };
+
+        // Toggle menu for mobile
+        function toggleMenu() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            sidebar.classList.toggle('active');
+            overlay.classList.toggle('active');
+        }
 
         class Node {
             constructor(type, x, y) {
@@ -458,7 +546,10 @@
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'delete-btn';
                 deleteBtn.textContent = '✕';
-                deleteBtn.onclick = () => this.delete();
+                deleteBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    this.delete();
+                };
                 
                 header.appendChild(headerTitle);
                 header.appendChild(deleteBtn);
@@ -573,20 +664,42 @@
             attachEvents() {
                 const header = this.element.querySelector('.node-header');
                 
+                // Mouse events
                 header.addEventListener('mousedown', (e) => {
                     if (e.target.tagName === 'BUTTON') return;
-                    isDragging = true;
-                    selectedNode = this;
-                    
-                    // Remove selected class from all nodes
-                    document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
-                    this.element.classList.add('selected');
-                    
-                    const rect = this.element.getBoundingClientRect();
-                    const canvasRect = document.getElementById('canvas').getBoundingClientRect();
-                    dragOffset.x = e.clientX - rect.left;
-                    dragOffset.y = e.clientY - rect.top;
+                    this.startDrag(e.clientX, e.clientY);
                 });
+
+                // Touch events
+                header.addEventListener('touchstart', (e) => {
+                    if (e.target.tagName === 'BUTTON') return;
+                    const touch = e.touches[0];
+                    this.startDrag(touch.clientX, touch.clientY);
+                }, { passive: true });
+            }
+
+            startDrag(clientX, clientY) {
+                isDragging = true;
+                selectedNode = this;
+                
+                // Remove selected class from all nodes
+                document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
+                this.element.classList.add('selected');
+                
+                const rect = this.element.getBoundingClientRect();
+                const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+                dragOffset.x = clientX - rect.left;
+                dragOffset.y = clientY - rect.top;
+
+                // Close sidebar on mobile when dragging starts
+                if (window.innerWidth <= 768) {
+                    const sidebar = document.getElementById('sidebar');
+                    const overlay = document.querySelector('.sidebar-overlay');
+                    if (sidebar.classList.contains('active')) {
+                        sidebar.classList.remove('active');
+                        overlay.classList.remove('active');
+                    }
+                }
             }
 
             updatePosition(x, y) {
@@ -610,16 +723,19 @@
         function createPanelNode() {
             const node = new Node('panel', 100 + nodes.length * 30, 100 + nodes.length * 30);
             nodes.push(node);
+            if (window.innerWidth <= 768) toggleMenu();
         }
 
         function createButtonNode() {
             const node = new Node('button', 400 + nodes.length * 30, 100 + nodes.length * 30);
             nodes.push(node);
+            if (window.innerWidth <= 768) toggleMenu();
         }
 
         function createTabNode() {
             const node = new Node('tab', 700 + nodes.length * 30, 100 + nodes.length * 30);
             nodes.push(node);
+            if (window.innerWidth <= 768) toggleMenu();
         }
 
         function updateNodeData(nodeId, field, value) {
@@ -719,6 +835,15 @@
             const code = document.getElementById('codeOutput').textContent;
             navigator.clipboard.writeText(code).then(() => {
                 alert('Code copié dans le presse-papier !');
+            }).catch(() => {
+                // Fallback for older browsers
+                const textarea = document.createElement('textarea');
+                textarea.value = code;
+                document.body.appendChild(textarea);
+                textarea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textarea);
+                alert('Code copié dans le presse-papier !');
             });
         }
 
@@ -726,17 +851,38 @@
             document.getElementById('codeModal').classList.remove('active');
         }
 
-        // Mouse events for dragging
+        // Mouse and Touch events for dragging
+        function handleDrag(clientX, clientY) {
+            if (!isDragging || !selectedNode) return;
+            
+            const canvas = document.getElementById('canvas');
+            const canvasRect = canvas.getBoundingClientRect();
+            const scrollLeft = canvas.scrollLeft;
+            const scrollTop = canvas.scrollTop;
+            
+            const x = clientX - canvasRect.left + scrollLeft - dragOffset.x;
+            const y = clientY - canvasRect.top + scrollTop - dragOffset.y;
+            
+            selectedNode.updatePosition(Math.max(0, x), Math.max(0, y));
+        }
+
         document.addEventListener('mousemove', (e) => {
-            if (isDragging && selectedNode) {
-                const canvasRect = document.getElementById('canvas').getBoundingClientRect();
-                const x = e.clientX - canvasRect.left - dragOffset.x;
-                const y = e.clientY - canvasRect.top - dragOffset.y;
-                selectedNode.updatePosition(x, y);
-            }
+            handleDrag(e.clientX, e.clientY);
         });
 
+        document.addEventListener('touchmove', (e) => {
+            if (isDragging && selectedNode) {
+                e.preventDefault();
+                const touch = e.touches[0];
+                handleDrag(touch.clientX, touch.clientY);
+            }
+        }, { passive: false });
+
         document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        document.addEventListener('touchend', () => {
             isDragging = false;
         });
 
@@ -746,6 +892,13 @@
                 closeModal();
             }
         });
+
+        // Prevent default touch behaviors
+        document.body.addEventListener('touchmove', (e) => {
+            if (e.target.closest('.node-body input, .node-body select, .node-body textarea')) {
+                return;
+            }
+        }, { passive: true });
     </script>
 </body>
 </html>
