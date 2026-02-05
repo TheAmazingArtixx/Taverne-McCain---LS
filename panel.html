@@ -1,0 +1,751 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nova-Life Panel Builder</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 300px;
+            background: #2d3748;
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+        }
+
+        .sidebar h2 {
+            margin-bottom: 20px;
+            color: #4fd1c5;
+            font-size: 24px;
+        }
+
+        .section {
+            margin-bottom: 30px;
+        }
+
+        .section h3 {
+            font-size: 16px;
+            margin-bottom: 15px;
+            color: #cbd5e0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            transition: all 0.3s;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn:hover {
+            transform: translateX(5px);
+        }
+
+        .btn-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+        }
+
+        .btn-tab {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+        }
+
+        .btn-export {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+            margin-top: 20px;
+        }
+
+        .btn-clear {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            color: white;
+        }
+
+        /* Canvas */
+        .canvas {
+            flex: 1;
+            position: relative;
+            background: #1a202c;
+            overflow: hidden;
+        }
+
+        .canvas-grid {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(255,255,255,0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Node */
+        .node {
+            position: absolute;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            min-width: 250px;
+            cursor: move;
+            z-index: 10;
+        }
+
+        .node.selected {
+            box-shadow: 0 0 0 3px #4fd1c5;
+        }
+
+        .node-header {
+            padding: 15px;
+            border-radius: 12px 12px 0 0;
+            color: white;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .node-header.panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .node-header.button {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .node-header.tab {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+        }
+
+        .node-body {
+            padding: 15px;
+        }
+
+        .node-field {
+            margin-bottom: 12px;
+        }
+
+        .node-field label {
+            display: block;
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .node-field input,
+        .node-field select,
+        .node-field textarea {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #e2e8f0;
+            border-radius: 6px;
+            font-size: 13px;
+            transition: border-color 0.3s;
+        }
+
+        .node-field input:focus,
+        .node-field select:focus,
+        .node-field textarea:focus {
+            outline: none;
+            border-color: #4fd1c5;
+        }
+
+        .node-field textarea {
+            min-height: 80px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        .delete-btn {
+            background: #fc8181;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .delete-btn:hover {
+            background: #f56565;
+        }
+
+        /* Connection lines */
+        .connection-line {
+            position: absolute;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        /* Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 800px;
+            max-height: 80vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+        }
+
+        .modal-content h2 {
+            margin-bottom: 20px;
+            color: #2d3748;
+        }
+
+        .code-output {
+            background: #2d3748;
+            color: #a0aec0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+            line-height: 1.6;
+        }
+
+        .code-output .keyword {
+            color: #c678dd;
+        }
+
+        .code-output .class-name {
+            color: #e5c07b;
+        }
+
+        .code-output .string {
+            color: #98c379;
+        }
+
+        .code-output .comment {
+            color: #5c6370;
+            font-style: italic;
+        }
+
+        .modal-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .modal-btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .modal-btn-primary {
+            background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+            color: white;
+        }
+
+        .modal-btn-secondary {
+            background: #e2e8f0;
+            color: #2d3748;
+        }
+
+        .icon {
+            font-size: 18px;
+        }
+
+        /* Tooltip */
+        .tooltip {
+            position: relative;
+            display: inline-block;
+        }
+
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            background-color: #2d3748;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 5px 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -60px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Sidebar -->
+        <div class="sidebar">
+            <h2>🛠️ Panel Builder</h2>
+            
+            <div class="section">
+                <h3>Créer des composants</h3>
+                <button class="btn btn-panel" onclick="createPanelNode()">
+                    <span class="icon">📋</span> Nouveau Panel
+                </button>
+                <button class="btn btn-button" onclick="createButtonNode()">
+                    <span class="icon">🔘</span> Nouveau Bouton
+                </button>
+                <button class="btn btn-tab" onclick="createTabNode()">
+                    <span class="icon">📑</span> Nouveau Onglet
+                </button>
+            </div>
+
+            <div class="section">
+                <h3>Actions</h3>
+                <button class="btn btn-export" onclick="generateCode()">
+                    <span class="icon">⚡</span> Générer C# Code
+                </button>
+                <button class="btn btn-clear" onclick="clearCanvas()">
+                    <span class="icon">🗑️</span> Effacer tout
+                </button>
+            </div>
+
+            <div class="section">
+                <h3>Instructions</h3>
+                <p style="font-size: 12px; color: #a0aec0; line-height: 1.6;">
+                    1. Créez un Panel<br>
+                    2. Ajoutez des Boutons/Onglets<br>
+                    3. Configurez les propriétés<br>
+                    4. Générez le code C#
+                </p>
+            </div>
+        </div>
+
+        <!-- Canvas -->
+        <div class="canvas" id="canvas">
+            <div class="canvas-grid"></div>
+            <svg id="connections" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5;">
+            </svg>
+        </div>
+    </div>
+
+    <!-- Modal for code export -->
+    <div class="modal" id="codeModal">
+        <div class="modal-content">
+            <h2>Code C# Généré</h2>
+            <div class="code-output" id="codeOutput"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-primary" onclick="copyCode()">📋 Copier le code</button>
+                <button class="modal-btn modal-btn-secondary" onclick="closeModal()">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let nodeCounter = 0;
+        let nodes = [];
+        let selectedNode = null;
+        let isDragging = false;
+        let dragOffset = { x: 0, y: 0 };
+
+        class Node {
+            constructor(type, x, y) {
+                this.id = `node_${nodeCounter++}`;
+                this.type = type;
+                this.x = x;
+                this.y = y;
+                this.data = {};
+                this.element = null;
+                
+                if (type === 'panel') {
+                    this.data = {
+                        name: `panel${nodeCounter}`,
+                        panelType: 'Text',
+                        title: 'Mon Panel',
+                        subtitle: '',
+                        text: ''
+                    };
+                } else if (type === 'button') {
+                    this.data = {
+                        name: `button${nodeCounter}`,
+                        text: 'Mon Bouton',
+                        parentPanel: '',
+                        action: '// Code personnalisé\n',
+                        actionType: 'custom'
+                    };
+                } else if (type === 'tab') {
+                    this.data = {
+                        name: `tab${nodeCounter}`,
+                        text: 'Mon Onglet',
+                        parentPanel: '',
+                        icon: '',
+                        price: '0'
+                    };
+                }
+                
+                this.createElement();
+            }
+
+            createElement() {
+                const node = document.createElement('div');
+                node.className = 'node';
+                node.id = this.id;
+                node.style.left = `${this.x}px`;
+                node.style.top = `${this.y}px`;
+
+                const header = document.createElement('div');
+                header.className = `node-header ${this.type}`;
+                
+                const headerTitle = document.createElement('span');
+                headerTitle.textContent = this.type === 'panel' ? '📋 Panel' : 
+                                          this.type === 'button' ? '🔘 Bouton' : '📑 Onglet';
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.textContent = '✕';
+                deleteBtn.onclick = () => this.delete();
+                
+                header.appendChild(headerTitle);
+                header.appendChild(deleteBtn);
+                node.appendChild(header);
+
+                const body = document.createElement('div');
+                body.className = 'node-body';
+                body.innerHTML = this.getBodyHTML();
+                node.appendChild(body);
+
+                this.element = node;
+                this.attachEvents();
+                document.getElementById('canvas').appendChild(node);
+            }
+
+            getBodyHTML() {
+                if (this.type === 'panel') {
+                    return `
+                        <div class="node-field">
+                            <label>Nom de variable</label>
+                            <input type="text" value="${this.data.name}" onchange="updateNodeData('${this.id}', 'name', this.value)">
+                        </div>
+                        <div class="node-field">
+                            <label>Type de Panel</label>
+                            <select onchange="updateNodeData('${this.id}', 'panelType', this.value)">
+                                <option value="Text" ${this.data.panelType === 'Text' ? 'selected' : ''}>Text</option>
+                                <option value="Input" ${this.data.panelType === 'Input' ? 'selected' : ''}>Input</option>
+                                <option value="Tab" ${this.data.panelType === 'Tab' ? 'selected' : ''}>Tab</option>
+                                <option value="TabPrice" ${this.data.panelType === 'TabPrice' ? 'selected' : ''}>TabPrice</option>
+                            </select>
+                        </div>
+                        <div class="node-field">
+                            <label>Titre</label>
+                            <input type="text" value="${this.data.title}" onchange="updateNodeData('${this.id}', 'title', this.value)">
+                        </div>
+                        <div class="node-field">
+                            <label>Sous-titre</label>
+                            <input type="text" value="${this.data.subtitle}" onchange="updateNodeData('${this.id}', 'subtitle', this.value)">
+                        </div>
+                        <div class="node-field">
+                            <label>Texte</label>
+                            <input type="text" value="${this.data.text}" onchange="updateNodeData('${this.id}', 'text', this.value)">
+                        </div>
+                    `;
+                } else if (this.type === 'button') {
+                    const panelOptions = nodes.filter(n => n.type === 'panel')
+                        .map(n => `<option value="${n.data.name}" ${this.data.parentPanel === n.data.name ? 'selected' : ''}>${n.data.name}</option>`)
+                        .join('');
+                    
+                    return `
+                        <div class="node-field">
+                            <label>Nom de variable</label>
+                            <input type="text" value="${this.data.name}" onchange="updateNodeData('${this.id}', 'name', this.value)">
+                        </div>
+                        <div class="node-field">
+                            <label>Panel parent</label>
+                            <select onchange="updateNodeData('${this.id}', 'parentPanel', this.value)">
+                                <option value="">-- Sélectionner --</option>
+                                ${panelOptions}
+                            </select>
+                        </div>
+                        <div class="node-field">
+                            <label>Texte du bouton</label>
+                            <input type="text" value="${this.data.text}" onchange="updateNodeData('${this.id}', 'text', this.value)">
+                        </div>
+                        <div class="node-field">
+                            <label>Type d'action</label>
+                            <select onchange="updateNodeData('${this.id}', 'actionType', this.value); updateButtonAction('${this.id}')">
+                                <option value="custom" ${this.data.actionType === 'custom' ? 'selected' : ''}>Code personnalisé</option>
+                                <option value="selectTab" ${this.data.actionType === 'selectTab' ? 'selected' : ''}>SelectTab()</option>
+                                <option value="showPanel" ${this.data.actionType === 'showPanel' ? 'selected' : ''}>ShowPanelUI()</option>
+                            </select>
+                        </div>
+                        <div class="node-field">
+                            <label>Action / Code</label>
+                            <textarea onchange="updateNodeData('${this.id}', 'action', this.value)">${this.data.action}</textarea>
+                        </div>
+                    `;
+                } else if (this.type === 'tab') {
+                    const panelOptions = nodes.filter(n => n.type === 'panel')
+                        .map(n => `<option value="${n.data.name}" ${this.data.parentPanel === n.data.name ? 'selected' : ''}>${n.data.name}</option>`)
+                        .join('');
+                    
+                    return `
+                        <div class="node-field">
+                            <label>Nom de variable</label>
+                            <input type="text" value="${this.data.name}" onchange="updateNodeData('${this.id}', 'name', this.value)">
+                        </div>
+                        <div class="node-field">
+                            <label>Panel parent</label>
+                            <select onchange="updateNodeData('${this.id}', 'parentPanel', this.value)">
+                                <option value="">-- Sélectionner --</option>
+                                ${panelOptions}
+                            </select>
+                        </div>
+                        <div class="node-field">
+                            <label>Texte de l'onglet</label>
+                            <input type="text" value="${this.data.text}" onchange="updateNodeData('${this.id}', 'text', this.value)">
+                        </div>
+                        <div class="node-field">
+                            <label>Icône (optionnel)</label>
+                            <input type="text" value="${this.data.icon}" onchange="updateNodeData('${this.id}', 'icon', this.value)">
+                        </div>
+                        <div class="node-field">
+                            <label>Prix (pour TabPrice)</label>
+                            <input type="text" value="${this.data.price}" onchange="updateNodeData('${this.id}', 'price', this.value)">
+                        </div>
+                    `;
+                }
+            }
+
+            attachEvents() {
+                const header = this.element.querySelector('.node-header');
+                
+                header.addEventListener('mousedown', (e) => {
+                    if (e.target.tagName === 'BUTTON') return;
+                    isDragging = true;
+                    selectedNode = this;
+                    
+                    // Remove selected class from all nodes
+                    document.querySelectorAll('.node').forEach(n => n.classList.remove('selected'));
+                    this.element.classList.add('selected');
+                    
+                    const rect = this.element.getBoundingClientRect();
+                    const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+                    dragOffset.x = e.clientX - rect.left;
+                    dragOffset.y = e.clientY - rect.top;
+                });
+            }
+
+            updatePosition(x, y) {
+                this.x = x;
+                this.y = y;
+                this.element.style.left = `${x}px`;
+                this.element.style.top = `${y}px`;
+            }
+
+            delete() {
+                this.element.remove();
+                nodes = nodes.filter(n => n.id !== this.id);
+            }
+
+            refresh() {
+                const body = this.element.querySelector('.node-body');
+                body.innerHTML = this.getBodyHTML();
+            }
+        }
+
+        function createPanelNode() {
+            const node = new Node('panel', 100 + nodes.length * 30, 100 + nodes.length * 30);
+            nodes.push(node);
+        }
+
+        function createButtonNode() {
+            const node = new Node('button', 400 + nodes.length * 30, 100 + nodes.length * 30);
+            nodes.push(node);
+        }
+
+        function createTabNode() {
+            const node = new Node('tab', 700 + nodes.length * 30, 100 + nodes.length * 30);
+            nodes.push(node);
+        }
+
+        function updateNodeData(nodeId, field, value) {
+            const node = nodes.find(n => n.id === nodeId);
+            if (node) {
+                node.data[field] = value;
+                
+                // Refresh all button and tab nodes when a panel name changes
+                if (field === 'name' && node.type === 'panel') {
+                    nodes.filter(n => n.type === 'button' || n.type === 'tab').forEach(n => n.refresh());
+                }
+            }
+        }
+
+        function updateButtonAction(nodeId) {
+            const node = nodes.find(n => n.id === nodeId);
+            if (node && node.type === 'button') {
+                if (node.data.actionType === 'selectTab') {
+                    node.data.action = `${node.data.parentPanel}.SelectTab();`;
+                } else if (node.data.actionType === 'showPanel') {
+                    node.data.action = `${node.data.parentPanel}.ShowPanelUI(panelSouhaité);`;
+                } else {
+                    node.data.action = '// Code personnalisé\n';
+                }
+                node.refresh();
+            }
+        }
+
+        function clearCanvas() {
+            if (confirm('Êtes-vous sûr de vouloir tout effacer ?')) {
+                nodes.forEach(node => node.element.remove());
+                nodes = [];
+                nodeCounter = 0;
+            }
+        }
+
+        function generateCode() {
+            let code = `// Code généré par Nova-Life Panel Builder\n`;
+            code += `// Date: ${new Date().toLocaleString()}\n\n`;
+            code += `using Life.UI;\n`;
+            code += `using UnityEngine;\n\n`;
+            
+            // Generate panel declarations
+            const panels = nodes.filter(n => n.type === 'panel');
+            panels.forEach(panel => {
+                code += `public UIPanel ${panel.data.name};\n`;
+            });
+            code += `\n`;
+
+            // Generate initialization code
+            code += `// Dans votre méthode d'initialisation (ex: Start, OnEnable):\n`;
+            panels.forEach(panel => {
+                code += `${panel.data.name} = new UIPanel("${panel.data.title}", UIPanel.PanelType.${panel.data.panelType});\n`;
+                
+                if (panel.data.subtitle) {
+                    code += `${panel.data.name}.subtitle = "${panel.data.subtitle}";\n`;
+                }
+                if (panel.data.text) {
+                    code += `${panel.data.name}.text = "${panel.data.text}";\n`;
+                }
+                
+                // Add buttons
+                const buttons = nodes.filter(n => n.type === 'button' && n.data.parentPanel === panel.data.name);
+                buttons.forEach(button => {
+                    code += `${panel.data.name}.AddButton("${button.data.text}", (ui) => {\n`;
+                    code += `    ${button.data.action.split('\n').join('\n    ')}\n`;
+                    code += `});\n`;
+                });
+                
+                // Add tabs
+                const tabs = nodes.filter(n => n.type === 'tab' && n.data.parentPanel === panel.data.name);
+                tabs.forEach(tab => {
+                    if (panel.data.panelType === 'TabPrice' && tab.data.icon && tab.data.price) {
+                        code += `${panel.data.name}.AddTabLine("${tab.data.text}", "${tab.data.icon}", ${tab.data.price}, (ui) => {\n`;
+                        code += `    // Action de l'onglet\n`;
+                        code += `});\n`;
+                    } else if (tab.data.icon) {
+                        code += `${panel.data.name}.AddTabLine("${tab.data.text}", "${tab.data.icon}", (ui) => {\n`;
+                        code += `    // Action de l'onglet\n`;
+                        code += `});\n`;
+                    } else {
+                        code += `${panel.data.name}.AddTabLine("${tab.data.text}", (ui) => {\n`;
+                        code += `    // Action de l'onglet\n`;
+                        code += `});\n`;
+                    }
+                });
+                
+                code += `\n`;
+            });
+
+            // Show in modal
+            document.getElementById('codeOutput').textContent = code;
+            document.getElementById('codeModal').classList.add('active');
+        }
+
+        function copyCode() {
+            const code = document.getElementById('codeOutput').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('Code copié dans le presse-papier !');
+            });
+        }
+
+        function closeModal() {
+            document.getElementById('codeModal').classList.remove('active');
+        }
+
+        // Mouse events for dragging
+        document.addEventListener('mousemove', (e) => {
+            if (isDragging && selectedNode) {
+                const canvasRect = document.getElementById('canvas').getBoundingClientRect();
+                const x = e.clientX - canvasRect.left - dragOffset.x;
+                const y = e.clientY - canvasRect.top - dragOffset.y;
+                selectedNode.updatePosition(x, y);
+            }
+        });
+
+        document.addEventListener('mouseup', () => {
+            isDragging = false;
+        });
+
+        // Close modal on outside click
+        document.getElementById('codeModal').addEventListener('click', (e) => {
+            if (e.target.id === 'codeModal') {
+                closeModal();
+            }
+        });
+    </script>
+</body>
+</html>
